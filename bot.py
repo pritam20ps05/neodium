@@ -3,6 +3,7 @@ import discord
 import os
 import urllib.request
 import re
+import asyncio
 # load our local env so we dont have the token in public
 from discord.ext import commands
 from discord.utils import get
@@ -11,13 +12,27 @@ from discord import TextChannel
 from youtube_dl import YoutubeDL
 from json import load
 
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+
 with open("credentials.json", "r") as creds:
     token = load(creds)["token"]
 
-client = commands.Bot(command_prefix='-')  # prefix our commands with '.'
+client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 
-players = {}
+# players = {}
+queues = {}
 
+async def check_queue(id, voice, ctx):
+    while voice.is_playing() or voice.is_paused():
+        await asyncio.sleep(5)
+    if queues[id] != []:
+        # print(queues[id][0])
+        voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
+        await ctx.send('Currently playing '+queues[id][0]["title"])
+        queues[id].pop(0)
+        await check_queue(id, voice, ctx)
 
 @client.event  # check if bot is ready
 async def on_ready():
@@ -42,9 +57,6 @@ async def play(ctx, *,keyw):
     video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
     url = "https://www.youtube.com/watch?v=" + video_ids[0]
 
-    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
-    FFMPEG_OPTIONS = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
     voice = get(client.voice_clients, guild=ctx.guild)
 
     # print(voice.is_playing())
@@ -53,13 +65,26 @@ async def play(ctx, *,keyw):
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
             URL = info['url']
+            queues[ctx.guild.id] = []
+            # for song in queues[ctx.guild.id]:
+            # print(URL)
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-            voice.is_playing()
-            await ctx.send('Bot is playing')
+            if voice.is_playing():
+                await ctx.send('Currently playing '+info["title"])
+            await check_queue(ctx.guild.id, voice, ctx)
 
     # check if the bot is already playing
         else:
-            await ctx.send("Bot is already playing")
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+            data = {
+                "link": info['url'],
+                "title": info['title']
+            }
+            queues[ctx.guild.id].append(data)
+            # print(ctx.guild.id)
+            # print(queues[ctx.guild.id])
+            await ctx.send("Item queued "+info["title"])
             return
     else: 
         channel = ctx.message.author.voice.channel
@@ -71,9 +96,13 @@ async def play(ctx, *,keyw):
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
         URL = info['url']
+        queues[ctx.guild.id] = []
+        # for song in queues[ctx.guild.id]:
+        # print(info.keys())
         voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-        voice.is_playing()
-        await ctx.send('Bot is playing')
+        if voice.is_playing():
+            await ctx.send('Currently playing '+info["title"])
+        await check_queue(ctx.guild.id, voice, ctx)
 
 
 # command to resume voice if it is paused
@@ -83,7 +112,7 @@ async def resume(ctx):
 
     if not voice.is_playing():
         voice.resume()
-        await ctx.send('Bot is resuming')
+        await ctx.send('Audio resuming')
 
 
 # command to pause voice if it is playing
@@ -93,22 +122,22 @@ async def pause(ctx):
 
     if voice.is_playing():
         voice.pause()
-        await ctx.send('Bot has been paused')
+        await ctx.send('Audio paused')
 
 
 # command to stop voice
 @client.command()
-async def stop(ctx):
+async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     if voice.is_playing():
         voice.stop()
-        await ctx.send('Stopping...')
+        await ctx.send('Skipping...')
 
 @client.command(name='leave', help='To make the bot leave the voice channel')
 async def leave(ctx):
     voice_client = get(client.voice_clients, guild=ctx.guild)
-    
+
     if voice_client:
         if voice_client.is_playing():
             voice_client.stop()
