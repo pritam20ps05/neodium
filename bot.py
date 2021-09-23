@@ -24,15 +24,18 @@ client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 # players = {}
 queues = {}
 
-async def check_queue(id, voice, ctx):
+async def check_queue(id, voice, ctx, msg):
     while voice.is_playing() or voice.is_paused():
         await asyncio.sleep(5)
+    await msg.delete()
     if queues[id] != []:
-        # print(queues[id][0])
+        # print(queues[id][0]["URL"])
+        embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
-        await ctx.send('Currently playing '+queues[id][0]["title"])
+        # await ctx.send('Currently playing '+queues[id][0]["title"])
+        msg = await ctx.send(embed=embed)
         queues[id].pop(0)
-        await check_queue(id, voice, ctx)
+        await check_queue(id, voice, ctx, msg)
 
 @client.event  # check if bot is ready
 async def on_ready():
@@ -61,17 +64,19 @@ async def play(ctx, *,keyw):
 
     # print(voice.is_playing())
     if voice:
-        if not voice.is_playing():
+        if not (voice.is_playing() or voice.is_paused()):
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
             URL = info['url']
             queues[ctx.guild.id] = []
             # for song in queues[ctx.guild.id]:
             # print(URL)
+            embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
             if voice.is_playing():
-                await ctx.send('Currently playing '+info["title"])
-            await check_queue(ctx.guild.id, voice, ctx)
+                # await ctx.send('Currently playing '+info["title"])
+                msg = await ctx.send(embed=embed)
+            await check_queue(ctx.guild.id, voice, ctx, msg)
 
     # check if the bot is already playing
         else:
@@ -79,77 +84,105 @@ async def play(ctx, *,keyw):
                 info = ydl.extract_info(url, download=False)
             data = {
                 "link": info['url'],
+                "url": url,
                 "title": info['title']
             }
             queues[ctx.guild.id].append(data)
             # print(ctx.guild.id)
             # print(queues[ctx.guild.id])
-            await ctx.send("Item queued "+info["title"])
+            embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+            # await ctx.send("Item queued "+info["title"])
+            await ctx.send(embed=embed)
             return
     else: 
-        channel = ctx.message.author.voice.channel
-        # voice = get(client.voice_clients, guild=ctx.guild)
-        if voice and voice.is_connected():
-            await voice.move_to(channel)
+        if ctx.message.author.voice:
+            channel = ctx.message.author.voice.channel
+            # voice = get(client.voice_clients, guild=ctx.guild)
+            if voice and voice.is_connected():
+                await voice.move_to(channel)
+            else:
+                voice = await channel.connect()
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+            URL = info['url']
+            queues[ctx.guild.id] = []
+            # for song in queues[ctx.guild.id]:
+            # print(URL)
+            embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+            voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
+            if voice.is_playing():
+                # await ctx.send('Currently playing '+info["title"])
+                msg = await ctx.send(embed=embed)
+            await check_queue(ctx.guild.id, voice, ctx, msg)
         else:
-            voice = await channel.connect()
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        URL = info['url']
-        queues[ctx.guild.id] = []
-        # for song in queues[ctx.guild.id]:
-        # print(info.keys())
-        voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-        if voice.is_playing():
-            await ctx.send('Currently playing '+info["title"])
-        await check_queue(ctx.guild.id, voice, ctx)
+            embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+            # await ctx.send('You are not currently connected to any voice channel')
+            await ctx.send(embed=embed, delete_after=10)
 
 
 # command to resume voice if it is paused
 @client.command()
 async def resume(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
+    embed=discord.Embed(title="Resuming...", color=0xfe4b81)
 
-    if not voice.is_playing():
-        voice.resume()
-        await ctx.send('Audio resuming')
+    if voice:
+        if not voice.is_playing():
+            voice.resume()
+            await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
+
 
 
 # command to pause voice if it is playing
 @client.command()
 async def pause(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
+    embed=discord.Embed(title="Pausing...", color=0xfe4b81)
 
-    if voice.is_playing():
-        voice.pause()
-        await ctx.send('Audio paused')
+    if voice:
+        if voice.is_playing():
+            voice.pause()
+            await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
 
 
 # command to stop voice
 @client.command()
 async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
+    embed=discord.Embed(title="Skipping...", color=0xfe4b81)
 
-    if voice.is_playing():
-        voice.stop()
-        await ctx.send('Skipping...')
+    if voice:
+        if voice.is_playing():
+            voice.stop()
+            await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
 
 @client.command(name='leave', help='To make the bot leave the voice channel')
 async def leave(ctx):
     voice_client = get(client.voice_clients, guild=ctx.guild)
+    embed=discord.Embed(title="I am currently not connected to a voice channel.", color=0xfe4b81)
 
     if voice_client:
         if voice_client.is_playing():
             voice_client.stop()
         await voice_client.disconnect()
     else:
-        await ctx.send("The bot is not connected to a voice channel.")
+        await ctx.send(embed=embed, delete_after=7)
 
 # command to clear channel messages
 @client.command()
 async def clear(ctx, amount=5):
     await ctx.channel.purge(limit=amount)
-    await ctx.send("Messages have been cleared")
+    embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
+    await ctx.send(embed=embed)
 
 
 client.run(token)
