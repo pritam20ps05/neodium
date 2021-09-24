@@ -55,7 +55,7 @@ async def join(ctx):
 
 
 # command to play sound from a youtube URL
-@client.command()
+@client.command(aliases=['p'])
 async def play(ctx, *,keyw):
     html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + keyw.replace(" ", "+"))
     video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
