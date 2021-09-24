@@ -212,5 +212,5 @@ async def clear(ctx, amount=5):
     embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
     await ctx.send(embed=embed)
 
-
+# creds loaded from json file
 client.run(token)
