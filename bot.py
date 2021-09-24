@@ -31,6 +31,7 @@ async def check_queue(id, voice, ctx, msg):
     if queues[id] != []:
         # print(queues[id][0]["URL"])
         embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
+        embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
         # await ctx.send('Currently playing '+queues[id][0]["title"])
         msg = await ctx.send(embed=embed)
@@ -72,6 +73,7 @@ async def play(ctx, *,keyw):
             # for song in queues[ctx.guild.id]:
             # print(URL)
             embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+            embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
             if voice.is_playing():
                 # await ctx.send('Currently playing '+info["title"])
@@ -85,12 +87,14 @@ async def play(ctx, *,keyw):
             data = {
                 "link": info['url'],
                 "url": url,
-                "title": info['title']
+                "title": info['title'],
+                "thumbnails": info["thumbnails"]
             }
             queues[ctx.guild.id].append(data)
             # print(ctx.guild.id)
             # print(queues[ctx.guild.id])
             embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+            embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
             # await ctx.send("Item queued "+info["title"])
             await ctx.send(embed=embed)
             return
@@ -107,8 +111,9 @@ async def play(ctx, *,keyw):
             URL = info['url']
             queues[ctx.guild.id] = []
             # for song in queues[ctx.guild.id]:
-            # print(URL)
+            # print()
             embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+            embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
             if voice.is_playing():
                 # await ctx.send('Currently playing '+info["title"])
