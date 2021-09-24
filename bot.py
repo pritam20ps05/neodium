@@ -1,14 +1,11 @@
 from json import loads
 import discord
-import os
 import urllib.request
 import re
 import asyncio
-# load our local env so we dont have the token in public
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
-from discord import TextChannel
 from youtube_dl import YoutubeDL
 from json import load
 
@@ -24,6 +21,7 @@ client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 # players = {}
 queues = {}
 
+# main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg):
     while voice.is_playing() or voice.is_paused():
         await asyncio.sleep(5)
@@ -38,7 +36,8 @@ async def check_queue(id, voice, ctx, msg):
         queues[id].pop(0)
         await check_queue(id, voice, ctx, msg)
 
-@client.event  # check if bot is ready
+# check if bot is ready
+@client.event  
 async def on_ready():
     print('Bot online')
 
@@ -54,7 +53,7 @@ async def join(ctx):
         voice = await channel.connect()
 
 
-# command to play sound from a youtube URL
+# command to play sound from a keyword and queue a song if request is made during playing an audio
 @client.command(aliases=['p'])
 async def play(ctx, *,keyw):
     html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + keyw.replace(" ", "+"))
@@ -65,6 +64,7 @@ async def play(ctx, *,keyw):
 
     # print(voice.is_playing())
     if voice:
+        # check if the bot is already playing
         if not (voice.is_playing() or voice.is_paused()):
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -80,7 +80,6 @@ async def play(ctx, *,keyw):
                 msg = await ctx.send(embed=embed)
             await check_queue(ctx.guild.id, voice, ctx, msg)
 
-    # check if the bot is already playing
         else:
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -124,7 +123,7 @@ async def play(ctx, *,keyw):
             # await ctx.send('You are not currently connected to any voice channel')
             await ctx.send(embed=embed, delete_after=10)
 
-
+# shows the queued songs of the ctx guild
 @client.command(name="queue")
 async def listQueue(ctx):
     out = ""
@@ -137,6 +136,7 @@ async def listQueue(ctx):
     embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
     await ctx.send(embed=embed)
 
+# removes a mentioned song from queue and displays it
 @client.command(name="remove")
 async def removeQueueSong(ctx, index: int):
     voice = get(client.voice_clients, guild=ctx.guild)
@@ -192,6 +192,7 @@ async def skip(ctx):
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
 
+# stops the bot player by clearing the current queue and skipping the current audio
 @client.command()
 async def stop(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
@@ -206,6 +207,7 @@ async def stop(ctx):
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
 
+# leaves the vc on demand
 @client.command(name='leave', help='To make the bot leave the voice channel')
 async def leave(ctx):
     voice_client = get(client.voice_clients, guild=ctx.guild)
