@@ -178,11 +178,25 @@ async def pause(ctx):
         await ctx.send(embed=embed, delete_after=7)
 
 
-# command to stop voice
+# command to skip voice
 @client.command()
 async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Skipping...", color=0xfe4b81)
+
+    if voice:
+        if voice.is_playing():
+            voice.stop()
+            await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
+
+@client.command()
+async def stop(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    embed=discord.Embed(title="Stopping...", color=0xfe4b81)
+    queues[ctx.guild.id] = []
 
     if voice:
         if voice.is_playing():
