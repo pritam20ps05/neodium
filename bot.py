@@ -137,6 +137,16 @@ async def listQueue(ctx):
     embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
     await ctx.send(embed=embed)
 
+@client.command(name="remove")
+async def removeQueueSong(ctx, index: int):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and (index<=len(queues[ctx.guild.id]) and index>0):
+        rem = queues[ctx.guild.id].pop(index-1)
+        embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
+    else:
+        embed=discord.Embed(title="Invalid request", color=0xfe4b81)
+    await ctx.send(embed=embed)
+
 # command to resume voice if it is paused
 @client.command()
 async def resume(ctx):
