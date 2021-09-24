@@ -18,7 +18,6 @@ with open("credentials.json", "r") as creds:
 
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 
-# players = {}
 queues = {}
 
 # main queue manager function to play music in queues
@@ -27,11 +26,9 @@ async def check_queue(id, voice, ctx, msg):
         await asyncio.sleep(5)
     await msg.delete()
     if queues[id] != []:
-        # print(queues[id][0]["URL"])
         embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
-        # await ctx.send('Currently playing '+queues[id][0]["title"])
         msg = await ctx.send(embed=embed)
         queues[id].pop(0)
         await check_queue(id, voice, ctx, msg)
@@ -62,7 +59,6 @@ async def play(ctx, *,keyw):
 
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    # print(voice.is_playing())
     if voice:
         # check if the bot is already playing
         if not (voice.is_playing() or voice.is_paused()):
@@ -70,13 +66,10 @@ async def play(ctx, *,keyw):
                 info = ydl.extract_info(url, download=False)
             URL = info['url']
             queues[ctx.guild.id] = []
-            # for song in queues[ctx.guild.id]:
-            # print(URL)
             embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
             embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
             if voice.is_playing():
-                # await ctx.send('Currently playing '+info["title"])
                 msg = await ctx.send(embed=embed)
             await check_queue(ctx.guild.id, voice, ctx, msg)
 
@@ -90,17 +83,13 @@ async def play(ctx, *,keyw):
                 "thumbnails": info["thumbnails"]
             }
             queues[ctx.guild.id].append(data)
-            # print(ctx.guild.id)
-            # print(queues[ctx.guild.id])
             embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
             embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-            # await ctx.send("Item queued "+info["title"])
             await ctx.send(embed=embed)
             return
     else: 
         if ctx.message.author.voice:
             channel = ctx.message.author.voice.channel
-            # voice = get(client.voice_clients, guild=ctx.guild)
             if voice and voice.is_connected():
                 await voice.move_to(channel)
             else:
@@ -109,18 +98,14 @@ async def play(ctx, *,keyw):
                 info = ydl.extract_info(url, download=False)
             URL = info['url']
             queues[ctx.guild.id] = []
-            # for song in queues[ctx.guild.id]:
-            # print()
             embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
             embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
             voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
             if voice.is_playing():
-                # await ctx.send('Currently playing '+info["title"])
                 msg = await ctx.send(embed=embed)
             await check_queue(ctx.guild.id, voice, ctx, msg)
         else:
             embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
-            # await ctx.send('You are not currently connected to any voice channel')
             await ctx.send(embed=embed, delete_after=10)
 
 # shows the queued songs of the ctx guild
