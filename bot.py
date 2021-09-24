@@ -125,6 +125,18 @@ async def play(ctx, *,keyw):
             await ctx.send(embed=embed, delete_after=10)
 
 
+@client.command(name="queue")
+async def listQueue(ctx):
+    out = ""
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and not queues[ctx.guild.id] == []:
+        for i, song in enumerate(queues[ctx.guild.id]):
+            out = out + str(i+1) + f'. [{song["title"]}]({song["url"]})\n'
+    else:
+        out = "None"
+    embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+    await ctx.send(embed=embed)
+
 # command to resume voice if it is paused
 @client.command()
 async def resume(ctx):
