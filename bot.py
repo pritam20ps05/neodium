@@ -55,7 +55,7 @@ async def join(ctx):
                 await voice.move_to(channel)
                 masters[ctx.guild.id] = ctx.message.author
             else:
-                embed=discord.Embed(title="I am currently in use in your server", color=0xfe4b81)
+                embed=discord.Embed(title="I am currently under use in your server", color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
 
         else:
@@ -231,12 +231,12 @@ async def skip(ctx):
 async def stop(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Stopping...", color=0xfe4b81)
-    queues[ctx.guild.id] = []
 
     if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
         embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
         await ctx.send(embed=embed)
     else:
+        queues[ctx.guild.id] = []
         queuelocks[ctx.guild.id] = {}
         queuelocks[ctx.guild.id]["lock"] = False
         if voice:
