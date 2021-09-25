@@ -82,7 +82,6 @@ async def play(ctx, *,keyw):
                 with YoutubeDL(YDL_OPTIONS) as ydl:
                     info = ydl.extract_info(url, download=False)
                 URL = info['url']
-                queues[ctx.guild.id] = []
                 # for song in queues[ctx.guild.id]:
                 # print(URL)
                 embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
@@ -116,10 +115,10 @@ async def play(ctx, *,keyw):
                 # voice = get(client.voice_clients, guild=ctx.guild)
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
                 with YoutubeDL(YDL_OPTIONS) as ydl:
                     info = ydl.extract_info(url, download=False)
                 URL = info['url']
-                queues[ctx.guild.id] = []
                 # for song in queues[ctx.guild.id]:
                 # print()
                 embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
@@ -136,7 +135,6 @@ async def play(ctx, *,keyw):
     except:
         embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
-        queues[ctx.guild.id] = []
 
 # shows the queued songs of the ctx guild
 @client.command(name="queue")
