@@ -21,6 +21,7 @@ client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 # players = {}
 masters = {}
 queues = {}
+queuelocks = {}
 
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg):
@@ -155,11 +156,16 @@ async def listQueue(ctx):
 @client.command(name="remove")
 async def removeQueueSong(ctx, index: int):
     voice = get(client.voice_clients, guild=ctx.guild)
-    if voice and (index<=len(queues[ctx.guild.id]) and index>0):
-        rem = queues[ctx.guild.id].pop(index-1)
-        embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+        embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
     else:
-        embed=discord.Embed(title="Invalid request", color=0xfe4b81)
+        queuelocks[ctx.guild.id] = {}
+        queuelocks[ctx.guild.id]["lock"] = False
+        if voice and (index<=len(queues[ctx.guild.id]) and index>0):
+            rem = queues[ctx.guild.id].pop(index-1)
+            embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
+        else:
+            embed=discord.Embed(title="Invalid request", color=0xfe4b81)
     await ctx.send(embed=embed)
 
 # command to resume voice if it is paused
@@ -184,13 +190,19 @@ async def pause(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Pausing...", color=0xfe4b81)
 
-    if voice:
-        if voice.is_playing():
-            voice.pause()
-            await ctx.send(embed=embed)
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+        embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+        await ctx.send(embed=embed)
     else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
-        await ctx.send(embed=embed, delete_after=7)
+        queuelocks[ctx.guild.id] = {}
+        queuelocks[ctx.guild.id]["lock"] = False
+        if voice:
+            if voice.is_playing():
+                voice.pause()
+                await ctx.send(embed=embed)
+        else:
+            embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=7)
 
 
 # command to skip voice
@@ -199,13 +211,19 @@ async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Skipping...", color=0xfe4b81)
 
-    if voice:
-        if voice.is_playing():
-            voice.stop()
-            await ctx.send(embed=embed)
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+        embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+        await ctx.send(embed=embed)
     else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
-        await ctx.send(embed=embed, delete_after=7)
+        queuelocks[ctx.guild.id] = {}
+        queuelocks[ctx.guild.id]["lock"] = False
+        if voice:
+            if voice.is_playing():
+                voice.stop()
+                await ctx.send(embed=embed)
+        else:
+            embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=7)
 
 # stops the bot player by clearing the current queue and skipping the current audio
 @client.command()
@@ -214,13 +232,19 @@ async def stop(ctx):
     embed=discord.Embed(title="Stopping...", color=0xfe4b81)
     queues[ctx.guild.id] = []
 
-    if voice:
-        if voice.is_playing():
-            voice.stop()
-            await ctx.send(embed=embed)
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+        embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+        await ctx.send(embed=embed)
     else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
-        await ctx.send(embed=embed, delete_after=7)
+        queuelocks[ctx.guild.id] = {}
+        queuelocks[ctx.guild.id]["lock"] = False
+        if voice:
+            if voice.is_playing():
+                voice.stop()
+                await ctx.send(embed=embed)
+        else:
+            embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=7)
 
 # leaves the vc on demand
 @client.command(name='leave', help='To make the bot leave the voice channel')
@@ -245,6 +269,22 @@ async def clear(ctx, amount=5):
     await ctx.channel.purge(limit=amount)
     embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
     await ctx.send(embed=embed)
+
+@client.command()
+async def lock(ctx):
+    if queuelocks[ctx.guild.id]["lock"]:
+        if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
+            queuelocks[ctx.guild.id]["lock"] = False
+            embed=discord.Embed(title="Queue lock has been removed", color=0xfe4b81)
+            await ctx.send(embed=embed)
+        else:
+            embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has locked the queue', color=0xfe4b81)
+            await ctx.send(embed=embed)
+    else:
+        queuelocks[ctx.guild.id]["lock"] = True
+        queuelocks[ctx.guild.id]["author"] = ctx.message.author
+        embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has initiated queuelock', color=0xfe4b81)
+        await ctx.send(embed=embed)
 
 
 client.run(token)
