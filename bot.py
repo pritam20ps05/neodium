@@ -52,6 +52,7 @@ async def join(ctx):
         if voice and voice.is_connected():
             if masters[ctx.guild.id].voice.channel != voice.channel or (not voice.is_playing() and queues[ctx.guild.id] == []):
                 await voice.move_to(channel)
+                masters[ctx.guild.id] = ctx.message.author
             else:
                 embed=discord.Embed(title="I am currently in use in your server", color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
