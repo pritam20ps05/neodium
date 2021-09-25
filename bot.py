@@ -19,6 +19,7 @@ with open("credentials.json", "r") as creds:
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 
 # players = {}
+masters = {}
 queues = {}
 
 # main queue manager function to play music in queues
@@ -45,13 +46,23 @@ async def on_ready():
 # command for bot to join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in
 @client.command()
 async def join(ctx):
-    channel = ctx.message.author.voice.channel
-    voice = get(client.voice_clients, guild=ctx.guild)
-    if voice and voice.is_connected():
-        await voice.move_to(channel)
+    if ctx.message.author.voice:
+        channel = ctx.message.author.voice.channel
+        voice = get(client.voice_clients, guild=ctx.guild)
+        if voice and voice.is_connected():
+            if masters[ctx.guild.id].voice.channel != voice.channel or (not voice.is_playing() and queues[ctx.guild.id] == []):
+                await voice.move_to(channel)
+            else:
+                embed=discord.Embed(title="I am currently in use in your server", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+
+        else:
+            voice = await channel.connect()
+            queues[ctx.guild.id] = []
+            masters[ctx.guild.id] = ctx.message.author
     else:
-        voice = await channel.connect()
-    queues[ctx.guild.id] = []
+        embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
 
 
 # command to play sound from a keyword and queue a song if request is made during playing an audio
@@ -103,10 +114,8 @@ async def play(ctx, *,keyw):
             if ctx.message.author.voice:
                 channel = ctx.message.author.voice.channel
                 # voice = get(client.voice_clients, guild=ctx.guild)
-                if voice and voice.is_connected():
-                    await voice.move_to(channel)
-                else:
-                    voice = await channel.connect()
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
                 with YoutubeDL(YDL_OPTIONS) as ydl:
                     info = ydl.extract_info(url, download=False)
                 URL = info['url']
@@ -220,9 +229,13 @@ async def leave(ctx):
     embed=discord.Embed(title="I am currently not connected to a voice channel.", color=0xfe4b81)
 
     if voice_client:
-        if voice_client.is_playing():
-            voice_client.stop()
-        await voice_client.disconnect()
+        if masters[ctx.guild.id].voice.channel != voice_client.channel or (not voice_client.is_playing() and queues[ctx.guild.id] == []):
+            if voice_client.is_playing():
+                voice_client.stop()
+            await voice_client.disconnect()
+        else:
+                embed=discord.Embed(title="You can't disturb anyone listening to a song", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
     else:
         await ctx.send(embed=embed, delete_after=7)
 
