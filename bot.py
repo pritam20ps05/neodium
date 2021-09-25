@@ -157,7 +157,7 @@ async def listQueue(ctx):
 @client.command(name="remove")
 async def removeQueueSong(ctx, index: int):
     voice = get(client.voice_clients, guild=ctx.guild)
-    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
         embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
     else:
         queuelocks[ctx.guild.id] = {}
@@ -191,7 +191,7 @@ async def pause(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Pausing...", color=0xfe4b81)
 
-    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
         embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
         await ctx.send(embed=embed)
     else:
@@ -212,7 +212,7 @@ async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Skipping...", color=0xfe4b81)
 
-    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
         embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
         await ctx.send(embed=embed)
     else:
@@ -233,7 +233,7 @@ async def stop(ctx):
     embed=discord.Embed(title="Stopping...", color=0xfe4b81)
     queues[ctx.guild.id] = []
 
-    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and masters[ctx.guild.id].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
+    if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not voice.is_playing() and queues[ctx.guild.id] == []): 
         embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
         await ctx.send(embed=embed)
     else:
@@ -279,7 +279,7 @@ async def lock(ctx):
             embed=discord.Embed(title="Queue lock has been removed", color=0xfe4b81)
             await ctx.send(embed=embed)
         else:
-            embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has locked the queue', color=0xfe4b81)
+            embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has already locked the queue', color=0xfe4b81)
             await ctx.send(embed=embed)
     else:
         queuelocks[ctx.guild.id]["lock"] = True
