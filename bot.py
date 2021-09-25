@@ -65,7 +65,7 @@ async def play(ctx, *,keyw):
     # print(voice.is_playing())
     if voice:
         # check if the bot is already playing
-        if not (voice.is_playing() or voice.is_paused()):
+        if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
             URL = info['url']
