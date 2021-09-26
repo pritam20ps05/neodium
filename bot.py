@@ -51,7 +51,7 @@ async def join(ctx):
         channel = ctx.message.author.voice.channel
         voice = get(client.voice_clients, guild=ctx.guild)
         if voice and voice.is_connected():
-            if masters[ctx.guild.id].voice.channel != voice.channel or (not voice.is_playing() and queues[ctx.guild.id] == []):
+            if masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 await voice.move_to(channel)
                 masters[ctx.guild.id] = ctx.message.author
             else:
@@ -79,7 +79,7 @@ async def play(ctx, *,keyw):
     # print(voice.is_playing())
     try:
         if voice:
-            if masters[ctx.guild.id].voice.channel != voice.channel or (not voice.is_playing() and queues[ctx.guild.id] == []):
+            if masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
             # check if the bot is already playing
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
