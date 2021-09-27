@@ -270,7 +270,7 @@ async def leave(ctx):
 async def clear(ctx, amount=5):
     await ctx.channel.purge(limit=amount)
     embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, delete_after=7)
 
 @client.command()
 async def lock(ctx):
