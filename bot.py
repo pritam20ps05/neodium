@@ -6,10 +6,10 @@ import asyncio
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
-from youtube_dl import YoutubeDL
+from youtube_dl import YoutubeDL, utils
 from json import load
 
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': True}
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
@@ -37,6 +37,26 @@ async def check_queue(id, voice, ctx, msg=None):
         msg = await ctx.send(embed=embed)
         queues[id].pop(0)
         await check_queue(id, voice, ctx, msg)
+
+
+
+# a asyncronus function to get video details because normally some timeout issue occurs but this is slower
+async def addsongs(entries, ctx):
+    for song in entries:
+        url = "https://www.youtube.com/watch?v=" + song["url"]
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+        data = {
+            "link": info['url'],
+            "url": "https://www.youtube.com/watch?v="+info["id"],
+            "title": info['title'],
+            "thumbnails": info["thumbnails"],
+            "raw": info
+        }
+        queues[ctx.guild.id].append(data)
+        await asyncio.sleep(2)
+    embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
+    await ctx.send(embed=embed)
 
 
 
@@ -79,13 +99,13 @@ async def play(ctx, *,keyw):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     try:
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
             # check if the bot is already playing
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
                 data = {
                     "link": info['url'],
                     "url": url,
@@ -94,16 +114,9 @@ async def play(ctx, *,keyw):
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
-                # embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
-                # embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-                # voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-                # if voice.is_playing():
-                #     msg = await ctx.send(embed=embed)
                 await check_queue(ctx.guild.id, voice, ctx)
 
             else:
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
                 data = {
                     "link": info['url'],
                     "url": url,
@@ -121,8 +134,6 @@ async def play(ctx, *,keyw):
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
                 data = {
                     "link": info['url'],
                     "url": url,
@@ -131,11 +142,6 @@ async def play(ctx, *,keyw):
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
-                # embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
-                # embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-                # voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-                # if voice.is_playing():
-                #     msg = await ctx.send(embed=embed)
                 await check_queue(ctx.guild.id, voice, ctx)
             else:
                 embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
@@ -177,6 +183,71 @@ async def removeQueueSong(ctx, index: int):
     else:
         embed=discord.Embed(title="Invalid request", color=0xfe4b81)
     await ctx.send(embed=embed)
+
+
+
+@client.command(name="add-playlist")
+async def addPlaylist(ctx, link: str):
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    # user link formatting
+    if link.split("?")[0] == "https://www.youtube.com/watch":
+        id_frt = link.split("?")[1].split("&")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
+        link = "https://www.youtube.com/playlist?" + id_frt
+    elif link.split("?")[0] == "https://www.youtube.com/playlist":
+        pass
+    else:
+        # promt with invalid link
+        embed=discord.Embed(title="Invalid link", color=0xfe4b81)
+        await ctx.send(embed=embed)
+        return
+
+    try:
+        opts = {
+            "extract_flat": True
+        }
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(link, download=False)
+        embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
+
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            # check if the bot is already playing
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                await ctx.send(embed=embed)
+                loop = asyncio.get_event_loop()
+                coros = []
+                coros.append(addsongs(info["entries"], ctx))
+                coros.append(check_queue(ctx.guild.id, voice, ctx))
+                loop.run_until_complete(asyncio.gather(*coros))
+            else:
+                await ctx.send(embed=embed)
+                await addsongs(info["entries"], ctx)
+        else: 
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                await ctx.send(embed=embed)
+                loop = asyncio.get_event_loop()
+                coros = []
+                coros.append(addsongs(info["entries"], ctx))
+                coros.append(check_queue(ctx.guild.id, voice, ctx))
+                loop.run_until_complete(asyncio.gather(*coros))
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+    except utils.ExtractorError as e:
+        if "ERROR: The playlist does not exist." in e:
+            embed=discord.Embed(title="Such a playlist does not exist", color=0xfe4b81)
+        else:
+            embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
+    except:
+        embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
 
 
 
