@@ -6,10 +6,11 @@ import asyncio
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
+from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from youtube_dl import YoutubeDL, utils
 from json import load
 
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': True}
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': True, 'source_address': '0.0.0.0'}
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
@@ -30,7 +31,7 @@ async def check_queue(id, voice, ctx, msg=None):
         await asyncio.sleep(5)
     if msg:
         await msg.delete()
-    if queues[id] != []:
+    if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
         embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
@@ -154,16 +155,47 @@ async def play(ctx, *,keyw):
 
 # shows the queued songs of the ctx guild
 @client.command(name="queue")
-async def listQueue(ctx):
+async def listQueue(ctx, limit=10):
     out = ""
+    pages = []
+    npages = 1
     voice = get(client.voice_clients, guild=ctx.guild)
+
+    if len(queues[ctx.guild.id])%10 == 0 and len(queues[ctx.guild.id]) != 0:
+        npages = int(len(queues[ctx.guild.id])/10)
+    else:
+        npages = int(len(queues[ctx.guild.id])/10) + 1
+
     if voice and not queues[ctx.guild.id] == []:
-        for i, song in enumerate(queues[ctx.guild.id]):
-            out = out + str(i+1) + f'. [{song["title"]}]({song["url"]})\n'
+        paginator = EmbedPaginator(ctx)
+        paginator.add_reaction('⏮️', "first")
+        paginator.add_reaction('⏪', "back")
+        paginator.add_reaction('⏩', "next")
+        paginator.add_reaction('⏭️', "last")
+
+        i = 0
+        p = 1
+        for j, song in enumerate(queues[ctx.guild.id]):
+            if i < limit:
+                out = out + str(j+1) + f'. [{song["title"]}]({song["url"]})\n'
+                i = i + 1
+            else:
+                out = out + f'\n**Page {p}/{npages}**'
+                embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+                pages.append(embed)
+                out = str(j+1) + f'. [{song["title"]}]({song["url"]})\n'
+                i = 1
+                p = p + 1
+        out = out + f'\n**Page {p}/{npages}**'
+        embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+        pages.append(embed)
+
+        await paginator.run(pages)
+
     else:
         out = "None"
-    embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
-    await ctx.send(embed=embed)
+        embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+        await ctx.send(embed=embed)
 
 
 
@@ -245,6 +277,8 @@ async def addPlaylist(ctx, link: str):
         else:
             embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+    except RuntimeError as e:
+        print(e)
     except:
         embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
