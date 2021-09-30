@@ -1,4 +1,3 @@
-from json import loads
 import discord
 import urllib.request
 import re
@@ -6,7 +5,8 @@ import asyncio
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
-from youtube_dl import YoutubeDL
+from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
+from youtube_dl import YoutubeDL, utils
 from json import load
 
 # need a way to actually store cookies.txt remotely
@@ -19,25 +19,47 @@ with open("credentials.json", "r") as creds:
 
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 
-# players = {}
 masters = {}
 queues = {}
 queuelocks = {}
 
+
+
 # main queue manager function to play music in queues
-async def check_queue(id, voice, ctx, msg):
+async def check_queue(id, voice, ctx, msg=None):
     while voice.is_playing() or voice.is_paused():
         await asyncio.sleep(5)
-    await msg.delete()
-    if queues[id] != []:
-        # print(queues[id][0]["URL"])
+    if msg:
+        await msg.delete()
+    if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
         embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
-        # await ctx.send('Currently playing '+queues[id][0]["title"])
         msg = await ctx.send(embed=embed)
         queues[id].pop(0)
         await check_queue(id, voice, ctx, msg)
+
+
+
+# a asyncronus function to get video details because normally some timeout issue occurs but this is slower
+async def addsongs(entries, ctx):
+    for song in entries:
+        url = "https://www.youtube.com/watch?v=" + song["url"]
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+        data = {
+            "link": info['url'],
+            "url": "https://www.youtube.com/watch?v="+info["id"],
+            "title": info['title'],
+            "thumbnails": info["thumbnails"],
+            "raw": info
+        }
+        queues[ctx.guild.id].append(data)
+        await asyncio.sleep(2)
+    embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
+    await ctx.send(embed=embed)
+
+
 
 # check if bot is ready
 @client.event  
@@ -68,6 +90,97 @@ async def join(ctx):
         await ctx.send(embed=embed, delete_after=10)
 
 
+
+@client.command(aliases=['s'])
+async def search(ctx, *,keyw):
+    html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + keyw.replace(" ", "+"))
+    video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    videos = []
+
+    try:
+        for i, id in enumerate(video_ids):
+            if i < 5:
+                url = "https://www.youtube.com/watch?v=" + id
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                info["link"] = url
+                videos.append(info)
+                # await asyncio.sleep(1)
+
+        options = {'1️⃣': 0, '2️⃣': 1, '3️⃣': 2, '4️⃣': 3, '5️⃣': 4}
+        out = ''
+
+        for i, song in enumerate(videos):
+            out = f'{out}{i+1}. [{song["title"]}]({song["link"]})\n'
+
+        embed=discord.Embed(title="Search results", description=out, color=0xfe4b81)
+        emb = await ctx.send(embed=embed)
+
+        for option in options:
+            await emb.add_reaction(option)
+
+        def check(reaction, user):
+            return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+        
+        react, user = await client.wait_for('reaction_add', check=check, timeout=30.0)
+        info = videos[options[react.emoji]]
+
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            # check if the bot is already playing
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                data = {
+                    "link": info['url'],
+                    "url": info['link'],
+                    "title": info['title'],
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
+                }
+                queues[ctx.guild.id].append(data)
+                await check_queue(ctx.guild.id, voice, ctx)
+
+            else:
+                data = {
+                    "link": info['url'],
+                    "url": info['link'],
+                    "title": info['title'],
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
+                }
+                queues[ctx.guild.id].append(data)
+                embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+                await ctx.send(embed=embed)
+        else: 
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                data = {
+                    "link": info['url'],
+                    "url": info['link'],
+                    "title": info['title'],
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
+                }
+                queues[ctx.guild.id].append(data)
+                await check_queue(ctx.guild.id, voice, ctx)
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+    except asyncio.TimeoutError:
+        # await emb.delete()
+        pass
+    except:
+        embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
+
+
+
 # command to play sound from a keyword and queue a song if request is made during playing an audio
 @client.command(aliases=['p'])
 async def play(ctx, *,keyw):
@@ -77,82 +190,105 @@ async def play(ctx, *,keyw):
 
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    # print(voice.is_playing())
     try:
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
             # check if the bot is already playing
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                URL = info['url']
-                # for song in queues[ctx.guild.id]:
-                # print(URL)
-                embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
-                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-                voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-                if voice.is_playing():
-                    # await ctx.send('Currently playing '+info["title"])
-                    msg = await ctx.send(embed=embed)
-                await check_queue(ctx.guild.id, voice, ctx, msg)
-
-            else:
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
                 data = {
                     "link": info['url'],
                     "url": url,
                     "title": info['title'],
-                    "thumbnails": info["thumbnails"]
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
                 }
                 queues[ctx.guild.id].append(data)
-                # print(ctx.guild.id)
-                # print(queues[ctx.guild.id])
+                await check_queue(ctx.guild.id, voice, ctx)
+
+            else:
+                data = {
+                    "link": info['url'],
+                    "url": url,
+                    "title": info['title'],
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
+                }
+                queues[ctx.guild.id].append(data)
                 embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
                 embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-                # await ctx.send("Item queued "+info["title"])
                 await ctx.send(embed=embed)
-                return
         else: 
             if ctx.message.author.voice:
                 channel = ctx.message.author.voice.channel
-                # voice = get(client.voice_clients, guild=ctx.guild)
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                URL = info['url']
-                # for song in queues[ctx.guild.id]:
-                # print()
-                embed=discord.Embed(title="Currently playing", description=f'[{info["title"]}]({url})', color=0xfe4b81)
-                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
-                voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-                if voice.is_playing():
-                    # await ctx.send('Currently playing '+info["title"])
-                    msg = await ctx.send(embed=embed)
-                await check_queue(ctx.guild.id, voice, ctx, msg)
+                data = {
+                    "link": info['url'],
+                    "url": url,
+                    "title": info['title'],
+                    "thumbnails": info["thumbnails"],
+                    "raw": info
+                }
+                queues[ctx.guild.id].append(data)
+                await check_queue(ctx.guild.id, voice, ctx)
             else:
                 embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
-                # await ctx.send('You are not currently connected to any voice channel')
                 await ctx.send(embed=embed, delete_after=10)
     except:
         embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
 
+
+
 # shows the queued songs of the ctx guild
 @client.command(name="queue")
-async def listQueue(ctx):
+async def listQueue(ctx, limit=10):
     out = ""
+    pages = []
+    npages = 1
     voice = get(client.voice_clients, guild=ctx.guild)
+
+    if len(queues[ctx.guild.id])%limit == 0 and len(queues[ctx.guild.id]) != 0:
+        npages = int(len(queues[ctx.guild.id])/limit)
+    else:
+        npages = int(len(queues[ctx.guild.id])/limit) + 1
+
     if voice and not queues[ctx.guild.id] == []:
-        for i, song in enumerate(queues[ctx.guild.id]):
-            out = out + str(i+1) + f'. [{song["title"]}]({song["url"]})\n'
+        paginator = EmbedPaginator(ctx)
+        paginator.add_reaction('⏮️', "first")
+        paginator.add_reaction('⏪', "back")
+        paginator.add_reaction('⏩', "next")
+        paginator.add_reaction('⏭️', "last")
+
+        i = 0
+        p = 1
+        for j, song in enumerate(queues[ctx.guild.id]):
+            if i < limit:
+                out = out + str(j+1) + f'. [{song["title"]}]({song["url"]})\n'
+                i = i + 1
+            else:
+                out = out + f'\n**Page {p}/{npages}**'
+                embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+                pages.append(embed)
+                out = str(j+1) + f'. [{song["title"]}]({song["url"]})\n'
+                i = 1
+                p = p + 1
+        out = out + f'\n**Page {p}/{npages}**'
+        embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+        pages.append(embed)
+
+        await paginator.run(pages)
+
     else:
         out = "None"
-    embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
-    await ctx.send(embed=embed)
+        embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
+        await ctx.send(embed=embed)
+
+
 
 # removes a mentioned song from queue and displays it
 @client.command(name="remove")
@@ -171,6 +307,76 @@ async def removeQueueSong(ctx, index: int):
         embed=discord.Embed(title="Invalid request", color=0xfe4b81)
     await ctx.send(embed=embed)
 
+
+
+@client.command(name="add-playlist")
+async def addPlaylist(ctx, link: str):
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    # user link formatting
+    if link.split("?")[0] == "https://www.youtube.com/watch":
+        id_frt = link.split("?")[1].split("&")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
+        link = "https://www.youtube.com/playlist?" + id_frt
+    elif link.split("?")[0] == "https://www.youtube.com/playlist":
+        pass
+    else:
+        # promt with invalid link
+        embed=discord.Embed(title="Invalid link", color=0xfe4b81)
+        await ctx.send(embed=embed)
+        return
+
+    try:
+        opts = {
+            "extract_flat": True,
+            "source_address": "0.0.0.0"
+        }
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(link, download=False)
+        embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
+
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            # check if the bot is already playing
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                await ctx.send(embed=embed)
+                loop = asyncio.get_event_loop()
+                coros = []
+                coros.append(addsongs(info["entries"], ctx))
+                coros.append(check_queue(ctx.guild.id, voice, ctx))
+                loop.run_until_complete(asyncio.gather(*coros))
+            else:
+                await ctx.send(embed=embed)
+                await addsongs(info["entries"], ctx)
+        else: 
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                await ctx.send(embed=embed)
+                loop = asyncio.get_event_loop()
+                coros = []
+                coros.append(addsongs(info["entries"], ctx))
+                coros.append(check_queue(ctx.guild.id, voice, ctx))
+                loop.run_until_complete(asyncio.gather(*coros))
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+    except utils.ExtractorError as e:
+        if "ERROR: The playlist does not exist." in e:
+            embed=discord.Embed(title="Such a playlist does not exist", color=0xfe4b81)
+        else:
+            embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
+    except RuntimeError as e:
+        print(e)
+    except:
+        embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
+
+
+
 # command to resume voice if it is paused
 @client.command()
 async def resume(ctx):
@@ -178,9 +384,15 @@ async def resume(ctx):
     embed=discord.Embed(title="Resuming...", color=0xfe4b81)
 
     if voice:
-        if not voice.is_playing():
-            voice.resume()
+        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
+            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
             await ctx.send(embed=embed)
+        else:
+            queuelocks[ctx.guild.id] = {}
+            queuelocks[ctx.guild.id]["lock"] = False
+            if not voice.is_playing():
+                voice.resume()
+                await ctx.send(embed=embed)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
@@ -228,6 +440,8 @@ async def skip(ctx):
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
 
+
+
 # stops the bot player by clearing the current queue and skipping the current audio
 @client.command()
 async def stop(ctx):
@@ -249,6 +463,8 @@ async def stop(ctx):
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
 
+
+
 # leaves the vc on demand
 @client.command(name='leave', help='To make the bot leave the voice channel')
 async def leave(ctx):
@@ -266,12 +482,47 @@ async def leave(ctx):
         embed=discord.Embed(title="I am currently not connected to a voice channel.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
 
-# command to clear channel messages
-@client.command()
-async def clear(ctx, amount=5):
-    await ctx.channel.purge(limit=amount)
-    embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
-    await ctx.send(embed=embed)
+
+
+# command to clear queue
+@client.command(name="clear-queue", aliases=["clear"])
+async def clearQueue(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    # embed=discord.Embed(title="Stopping...", color=0xfe4b81)
+    options = ["👍", "🚫"]
+
+    if voice:
+        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
+            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+            await ctx.send(embed=embed)
+        else:
+            queuelocks[ctx.guild.id] = {}
+            queuelocks[ctx.guild.id]["lock"] = False
+            embed=discord.Embed(title="Do you really want to clear the queue", color=0xfe4b81)
+            emb = await ctx.send(embed=embed)
+
+            try:
+                for option in options:
+                    await emb.add_reaction(option)
+                
+                def chk(reaction, user):
+                    return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+                
+                react, user = await client.wait_for('reaction_add', check=chk, timeout=30.0)
+                if react.emoji == "👍":
+                    queues[ctx.guild.id] = []
+                    await emb.delete()
+                    embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
+                    await ctx.send(embed=embed)
+                else:
+                    await emb.delete()
+            except asyncio.TimeoutError:
+                await emb.delete()
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
+
+
 
 @client.command()
 async def lock(ctx):
