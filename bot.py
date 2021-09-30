@@ -383,9 +383,15 @@ async def resume(ctx):
     embed=discord.Embed(title="Resuming...", color=0xfe4b81)
 
     if voice:
-        if not voice.is_playing():
-            voice.resume()
+        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
+            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
             await ctx.send(embed=embed)
+        else:
+            queuelocks[ctx.guild.id] = {}
+            queuelocks[ctx.guild.id]["lock"] = False
+            if not voice.is_playing():
+                voice.resume()
+                await ctx.send(embed=embed)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
