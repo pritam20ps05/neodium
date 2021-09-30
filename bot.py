@@ -9,7 +9,7 @@ from discord import FFmpegPCMAudio
 from youtube_dl import YoutubeDL
 from json import load
 
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'cachedir': False, 'source_address': '0.0.0.0'}
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0', 'cookiefile': 'cookies.txt'}
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
