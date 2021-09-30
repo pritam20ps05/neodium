@@ -161,10 +161,10 @@ async def listQueue(ctx, limit=10):
     npages = 1
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    if len(queues[ctx.guild.id])%10 == 0 and len(queues[ctx.guild.id]) != 0:
-        npages = int(len(queues[ctx.guild.id])/10)
+    if len(queues[ctx.guild.id])%limit == 0 and len(queues[ctx.guild.id]) != 0:
+        npages = int(len(queues[ctx.guild.id])/limit)
     else:
-        npages = int(len(queues[ctx.guild.id])/10) + 1
+        npages = int(len(queues[ctx.guild.id])/limit) + 1
 
     if voice and not queues[ctx.guild.id] == []:
         paginator = EmbedPaginator(ctx)
@@ -386,12 +386,43 @@ async def leave(ctx):
 
 
 
-# command to clear channel messages
-@client.command()
-async def clear(ctx, amount=5):
-    await ctx.channel.purge(limit=amount)
-    embed=discord.Embed(title="Messages have been cleared", color=0xfe4b81)
-    await ctx.send(embed=embed, delete_after=7)
+# command to clear queue
+@client.command(name="clear-queue", aliases=["clear"])
+async def clearQueue(ctx, amount=5):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    # embed=discord.Embed(title="Stopping...", color=0xfe4b81)
+    options = ["👍", "🚫"]
+
+    if voice:
+        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
+            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+            await ctx.send(embed=embed)
+        else:
+            queuelocks[ctx.guild.id] = {}
+            queuelocks[ctx.guild.id]["lock"] = False
+            embed=discord.Embed(title="Do you really want to clear the queue", color=0xfe4b81)
+            emb = await ctx.send(embed=embed)
+
+            try:
+                for option in options:
+                    await emb.add_reaction(option)
+                
+                def chk(reaction, user):
+                    return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+                
+                react, user = await client.wait_for('reaction_add', check=chk, timeout=60.0)
+                if react.emoji == "👍":
+                    queues[ctx.guild.id] = []
+                    await emb.delete()
+                    embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
+                    await ctx.send(embed=embed)
+                else:
+                    await emb.delete()
+            except asyncio.TimeoutError:
+                await emb.delete()
+    else:
+        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=7)
 
 
 
