@@ -2,6 +2,7 @@ import discord
 import urllib.request
 import re
 import asyncio
+from time import time
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
@@ -9,7 +10,7 @@ from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from youtube_dl import YoutubeDL, utils
 from json import load
 
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': True, 'source_address': '0.0.0.0'}
+YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0'}
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
@@ -33,6 +34,14 @@ async def check_queue(id, voice, ctx, msg=None):
     if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
         embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
+
+        # check if the playable link is expired or not(1 hr buffered) if yes then refetch the info
+        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) < time() + 3600:
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(queues[id][0]["url"], download=False)
+            queues[id][0]["link"] = info['url']
+            queues[id][0]["raw"] = info
+
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
         msg = await ctx.send(embed=embed)
         queues[id].pop(0)
@@ -48,7 +57,7 @@ async def addsongs(entries, ctx):
             info = ydl.extract_info(url, download=False)
         data = {
             "link": info['url'],
-            "url": "https://www.youtube.com/watch?v="+info["id"],
+            "url": url,
             "title": info['title'],
             "thumbnails": info["thumbnails"],
             "raw": info
@@ -92,27 +101,29 @@ async def join(ctx):
 
 @client.command(aliases=['s'])
 async def search(ctx, *,keyw):
-    html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + keyw.replace(" ", "+"))
-    video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    videos = []
+    opts = {
+        "format": "bestaudio", 
+        "quiet": True,
+        "noplaylist": True, 
+        "skip_download": True, 
+        'forcetitle': True, 
+        'forceurl': True,
+        'source_address': '0.0.0.0'
+    }
+
+    with YoutubeDL(opts) as ydl:
+        songs = ydl.extract_info(f'ytsearch5:{keyw}')
+
+    videos = songs["entries"]
 
     try:
-        for i, id in enumerate(video_ids):
-            if i < 5:
-                url = "https://www.youtube.com/watch?v=" + id
-                with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                info["link"] = url
-                videos.append(info)
-                # await asyncio.sleep(1)
-
         options = {'1️⃣': 0, '2️⃣': 1, '3️⃣': 2, '4️⃣': 3, '5️⃣': 4}
         out = ''
 
         for i, song in enumerate(videos):
-            out = f'{out}{i+1}. [{song["title"]}]({song["link"]})\n'
+            out = f'{out}{i+1}. [{song["title"]}]({song["webpage_url"]})\n'
 
         embed=discord.Embed(title="Search results", description=out, color=0xfe4b81)
         emb = await ctx.send(embed=embed)
@@ -133,7 +144,7 @@ async def search(ctx, *,keyw):
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
                 data = {
                     "link": info['url'],
-                    "url": info['link'],
+                    "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
                     "raw": info
@@ -144,13 +155,13 @@ async def search(ctx, *,keyw):
             else:
                 data = {
                     "link": info['url'],
-                    "url": info['link'],
+                    "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
-                embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
+                embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({data["url"]})', color=0xfe4b81)
                 embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
                 await ctx.send(embed=embed)
         else: 
@@ -161,7 +172,7 @@ async def search(ctx, *,keyw):
                 queues[ctx.guild.id] = []
                 data = {
                     "link": info['url'],
-                    "url": info['link'],
+                    "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
                     "raw": info
@@ -296,7 +307,11 @@ async def removeQueueSong(ctx, index: int):
 
     if voice and (index<=len(queues[ctx.guild.id]) and index>0):
         if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
+                rem = queues[ctx.guild.id].pop(index-1)
+                embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
+            else:
+                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
@@ -384,8 +399,13 @@ async def resume(ctx):
 
     if voice:
         if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-            await ctx.send(embed=embed)
+            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
+                if not voice.is_playing():
+                    voice.resume()
+                    await ctx.send(embed=embed)
+            else:
+                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+                await ctx.send(embed=embed)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
@@ -406,8 +426,13 @@ async def pause(ctx):
 
     if voice:
         if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-            await ctx.send(embed=embed)
+            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
+                if voice.is_playing():
+                    voice.pause()
+                    await ctx.send(embed=embed)
+            else:
+                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+                await ctx.send(embed=embed)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
@@ -427,8 +452,13 @@ async def skip(ctx):
 
     if voice:
         if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-            await ctx.send(embed=embed)
+            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
+                if voice.is_playing():
+                    voice.stop()
+                    await ctx.send(embed=embed)
+            else:
+                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+                await ctx.send(embed=embed)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
