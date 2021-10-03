@@ -558,20 +558,24 @@ async def lock(ctx):
     voice_client = get(client.voice_clients, guild=ctx.guild)
     
     if ctx.message.author.voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice :
-            if queuelocks[ctx.guild.id]["author"] == ctx.message.author or (not (voice_client.is_playing() or voice_client.is_paused()) and queues[ctx.guild.id] == []):
-                queuelocks[ctx.guild.id]["lock"] = False
-                embed=discord.Embed(title="Queue lock has been removed", color=0xfe4b81)
-                await ctx.send(embed=embed)
+        if voice:
+            if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice :
+                if queuelocks[ctx.guild.id]["author"] == ctx.message.author or (not (voice_client.is_playing() or voice_client.is_paused()) and queues[ctx.guild.id] == []):
+                    queuelocks[ctx.guild.id]["lock"] = False
+                    embed=discord.Embed(title="Queue lock has been removed", color=0xfe4b81)
+                    await ctx.send(embed=embed)
+                else:
+                    embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has already locked the queue', color=0xfe4b81)
+                    await ctx.send(embed=embed)
             else:
-                embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has already locked the queue', color=0xfe4b81)
+                queuelocks[ctx.guild.id] = {}
+                queuelocks[ctx.guild.id]["lock"] = True
+                queuelocks[ctx.guild.id]["author"] = ctx.message.author
+                embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has initiated queuelock', color=0xfe4b81)
                 await ctx.send(embed=embed)
         else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = True
-            queuelocks[ctx.guild.id]["author"] = ctx.message.author
-            embed=discord.Embed(title=f'{queuelocks[ctx.guild.id]["author"].display_name} has initiated queuelock', color=0xfe4b81)
-            await ctx.send(embed=embed)
+            embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=10)
     else:
         embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
