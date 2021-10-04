@@ -8,7 +8,7 @@ from discord.utils import get
 from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from youtube_dl import YoutubeDL, utils
-from lyrics_extractor import SongLyrics
+from lyrics_extractor import SongLyrics, LyricScraperException
 from json import load
 
 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0'}
@@ -42,7 +42,7 @@ async def check_queue(id, voice, ctx, msg=None):
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
 
         # check if the playable link is expired or not(1 hr buffered) if yes then refetch the info
-        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) < int(time()) + 3600:
+        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) - int(time()) < 600:
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(queues[id][0]["url"], download=False)
             queues[id][0]["link"] = info['url']
@@ -64,12 +64,22 @@ async def addsongs(entries, ctx):
         url = "https://www.youtube.com/watch?v=" + song["url"]
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
+
+        try:
+            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
+        except:
+            # if e['error']['code'] == 429:
+            lyric = "Daily quota exceeded"
+            # else:
+            #     lyric = "None"
+            #     print(e)
+        
         data = {
             "link": info['url'],
             "url": url,
             "title": info['title'],
             "thumbnails": info["thumbnails"],
-            "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+            "lyrics": lyric,
             "raw": info
         }
         queues[ctx.guild.id].append(data)
@@ -148,6 +158,15 @@ async def search(ctx, *,keyw):
         react, user = await client.wait_for('reaction_add', check=check, timeout=30.0)
         info = videos[options[react.emoji]]
 
+        try:
+            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
+        except:
+            # if e['error']['code'] == 429:
+            lyric = "Daily quota exceeded"
+            # else:
+            #     lyric = "None"
+            #     print(e)
+
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -158,7 +177,7 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -170,7 +189,7 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -189,7 +208,7 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -218,6 +237,16 @@ async def play(ctx, *,keyw):
     try:
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
+
+        try:
+            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
+        except:
+            # if e['error']['code'] == 429:
+            lyric = "Daily quota exceeded"
+            # else:
+                # lyric = "None"
+                # print(e)
+
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -228,7 +257,7 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -240,7 +269,7 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -259,7 +288,7 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
+                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
