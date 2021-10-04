@@ -262,12 +262,12 @@ async def listQueue(ctx, limit=10):
     npages = 1
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    if len(queues[ctx.guild.id])%limit == 0 and len(queues[ctx.guild.id]) != 0:
-        npages = int(len(queues[ctx.guild.id])/limit)
-    else:
-        npages = int(len(queues[ctx.guild.id])/limit) + 1
 
     if voice and not queues[ctx.guild.id] == []:
+        if len(queues[ctx.guild.id])%limit == 0 and len(queues[ctx.guild.id]) != 0:
+            npages = int(len(queues[ctx.guild.id])/limit)
+        else:
+            npages = int(len(queues[ctx.guild.id])/limit) + 1
         paginator = EmbedPaginator(ctx)
         paginator.add_reaction('⏮️', "first")
         paginator.add_reaction('⏪', "back")
@@ -558,7 +558,7 @@ async def lock(ctx):
     voice_client = get(client.voice_clients, guild=ctx.guild)
     
     if ctx.message.author.voice:
-        if voice:
+        if voice_client:
             if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice :
                 if queuelocks[ctx.guild.id]["author"] == ctx.message.author or (not (voice_client.is_playing() or voice_client.is_paused()) and queues[ctx.guild.id] == []):
                     queuelocks[ctx.guild.id]["lock"] = False
