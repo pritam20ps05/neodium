@@ -8,6 +8,7 @@ from discord.utils import get
 from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from youtube_dl import YoutubeDL, utils
+from lyrics_extractor import SongLyrics
 from json import load
 
 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0'}
@@ -15,10 +16,15 @@ FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 with open("credentials.json", "r") as creds:
-    token = load(creds)["token"]
+    cred = load(creds)
+    token = cred["token"]
+    search_engine = cred["search_engine"]
+    search_token = cred["search_token"]
 
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
+lyrics_api = SongLyrics(search_token, search_engine)
 
+player = {}
 masters = {}
 queues = {}
 queuelocks = {}
@@ -36,7 +42,7 @@ async def check_queue(id, voice, ctx, msg=None):
         embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
 
         # check if the playable link is expired or not(1 hr buffered) if yes then refetch the info
-        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) < time() + 3600:
+        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) < int(time()) + 3600:
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(queues[id][0]["url"], download=False)
             queues[id][0]["link"] = info['url']
@@ -44,8 +50,11 @@ async def check_queue(id, voice, ctx, msg=None):
 
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
         msg = await ctx.send(embed=embed)
-        queues[id].pop(0)
+        current = queues[id].pop(0)
+        player[ctx.guild.id] = current
         await check_queue(id, voice, ctx, msg)
+    else:
+        player[ctx.guild.id] = {}
 
 
 
@@ -60,6 +69,7 @@ async def addsongs(entries, ctx):
             "url": url,
             "title": info['title'],
             "thumbnails": info["thumbnails"],
+            "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
             "raw": info
         }
         queues[ctx.guild.id].append(data)
@@ -93,6 +103,7 @@ async def join(ctx):
             voice = await channel.connect()
             queues[ctx.guild.id] = []
             masters[ctx.guild.id] = ctx.message.author
+            player[ctx.guild.id] = {}
     else:
         embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
@@ -147,6 +158,7 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -158,6 +170,7 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -170,11 +183,13 @@ async def search(ctx, *,keyw):
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
                 data = {
                     "link": info['url'],
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -213,6 +228,7 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -224,6 +240,7 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -236,11 +253,13 @@ async def play(ctx, *,keyw):
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
                 data = {
                     "link": info['url'],
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
+                    "lyrics": lyrics_api.get_lyrics(info['title'])['lyrics'],
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -297,6 +316,18 @@ async def listQueue(ctx, limit=10):
         out = "None"
         embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
         await ctx.send(embed=embed)
+
+
+
+@client.command()
+async def lyrics(ctx, index=0):
+    out = ""
+    if player[ctx.guild.id]:
+        out = player[ctx.guild.id]["lyrics"]
+        embed=discord.Embed(title="Lyrics", description=out, color=0xfe4b81)
+    else:
+        embed=discord.Embed(title="Nothing currently in the player", color=0xfe4b81)
+    await ctx.send(embed=embed)
 
 
 
@@ -368,6 +399,7 @@ async def addPlaylist(ctx, link: str):
                 voice = await channel.connect()
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
                 await ctx.send(embed=embed)
                 loop = asyncio.get_event_loop()
                 coros = []
@@ -503,6 +535,7 @@ async def leave(ctx):
         if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice_client.channel or (not (voice_client.is_playing() or voice_client.is_paused()) and queues[ctx.guild.id] == []):
             if voice_client.is_playing():
                 voice_client.stop()
+            player[ctx.guild.id] = {}
             await voice_client.disconnect()
         else:
                 embed=discord.Embed(title="You can't disturb anyone listening to a song", color=0xfe4b81)
