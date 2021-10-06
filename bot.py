@@ -67,12 +67,12 @@ async def addsongs(entries, ctx):
 
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except:
-            # if e['error']['code'] == 429:
-            lyric = "Daily quota exceeded"
-            # else:
-            #     lyric = "None"
-            #     print(e)
+        except LyricScraperException as e:
+            if e.args[0]["error"]["code"] == 429:
+                lyric = "Daily quota exceeded"
+            else:
+                lyric = "Something went wrong"
+                print(e.args[0])
         
         data = {
             "link": info['url'],
@@ -160,12 +160,12 @@ async def search(ctx, *,keyw):
 
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except:
-            # if e['error']['code'] == 429:
-            lyric = "Daily quota exceeded"
-            # else:
-            #     lyric = "None"
-            #     print(e)
+        except LyricScraperException as e:
+            if e.args[0]["error"]["code"] == 429:
+                lyric = "Daily quota exceeded"
+            else:
+                lyric = "Something went wrong"
+                print(e.args[0])
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
@@ -240,12 +240,12 @@ async def play(ctx, *,keyw):
 
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except:
-            # if e['error']['code'] == 429:
-            lyric = "Daily quota exceeded"
-            # else:
-                # lyric = "None"
-                # print(e)
+        except LyricScraperException as e:
+            if e.args[0]["error"]["code"] == 429:
+                lyric = "Daily quota exceeded"
+            else:
+                lyric = "Something went wrong"
+                print(e.args[0])
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
