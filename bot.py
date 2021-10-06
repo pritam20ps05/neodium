@@ -364,7 +364,9 @@ async def listQueue(ctx, limit=10):
 async def lyrics(ctx, index=0):
     out = ""
     if player[ctx.guild.id]:
-        out = player[ctx.guild.id]["lyrics"]
+        out = f'**{player[ctx.guild.id]["title"]}**\n\n{player[ctx.guild.id]["lyrics"]}'
+        if len(out) > 50:
+            out = f'{out}\n\n**Lyrics provided by [genius.com](https://genius.com/)**'
         embed=discord.Embed(title="Lyrics", description=out, color=0xfe4b81)
     else:
         embed=discord.Embed(title="Nothing currently in the player", color=0xfe4b81)
