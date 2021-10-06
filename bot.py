@@ -9,7 +9,7 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from youtube_dl import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from json import load
+from json import load, loads
 
 YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0'}
 FFMPEG_OPTIONS = {
@@ -68,9 +68,13 @@ async def addsongs(entries, ctx):
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
         except LyricScraperException as e:
-            if e.args[0]["error"]["code"] == 429:
-                lyric = "Daily quota exceeded"
-            else:
+            try:
+                if int(e.args[0]["error"]["code"]) == 429:
+                    lyric = "Daily quota exceeded"
+                else:
+                    lyric = "Something went wrong"
+                    print(e.args[0]["error"])
+            except:
                 lyric = "Something went wrong"
                 print(e.args[0])
         
@@ -161,9 +165,13 @@ async def search(ctx, *,keyw):
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
         except LyricScraperException as e:
-            if e.args[0]["error"]["code"] == 429:
-                lyric = "Daily quota exceeded"
-            else:
+            try:
+                if int(e.args[0]["error"]["code"]) == 429:
+                    lyric = "Daily quota exceeded"
+                else:
+                    lyric = "Something went wrong"
+                    print(e.args[0]["error"])
+            except:
                 lyric = "Something went wrong"
                 print(e.args[0])
 
@@ -241,9 +249,13 @@ async def play(ctx, *,keyw):
         try:
             lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
         except LyricScraperException as e:
-            if e.args[0]["error"]["code"] == 429:
-                lyric = "Daily quota exceeded"
-            else:
+            try:
+                if int(e.args[0]["error"]["code"]) == 429:
+                    lyric = "Daily quota exceeded"
+                else:
+                    lyric = "Something went wrong"
+                    print(e.args[0]["error"])
+            except:
                 lyric = "Something went wrong"
                 print(e.args[0])
 
