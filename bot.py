@@ -74,26 +74,12 @@ async def addsongs(entries, ctx):
         url = "https://www.youtube.com/watch?v=" + song["url"]
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
-
-        try:
-            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except LyricScraperException as e:
-            try:
-                if int(e.args[0]["error"]["code"]) == 429:
-                    lyric = "Daily quota exceeded"
-                else:
-                    lyric = "Something went wrong"
-                    print(e.args[0]["error"])
-            except:
-                lyric = "Something went wrong"
-                print(e)
         
         data = {
             "link": info['url'],
             "url": url,
             "title": info['title'],
             "thumbnails": info["thumbnails"],
-            "lyrics": lyric,
             "raw": info
         }
         queues[ctx.guild.id].append(data)
@@ -172,19 +158,6 @@ async def search(ctx, *,keyw):
         react, user = await client.wait_for('reaction_add', check=check, timeout=30.0)
         info = videos[options[react.emoji]]
 
-        try:
-            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except LyricScraperException as e:
-            try:
-                if int(e.args[0]["error"]["code"]) == 429:
-                    lyric = "Daily quota exceeded"
-                else:
-                    lyric = "Something went wrong"
-                    print(e.args[0]["error"])
-            except:
-                lyric = "Something went wrong"
-                print(e)
-
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -195,7 +168,6 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -207,7 +179,6 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -226,7 +197,6 @@ async def search(ctx, *,keyw):
                     "url": info['webpage_url'],
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -256,19 +226,6 @@ async def play(ctx, *,keyw):
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
 
-        try:
-            lyric = lyrics_api.get_lyrics(info['title'])['lyrics']
-        except LyricScraperException as e:
-            try:
-                if int(e.args[0]["error"]["code"]) == 429:
-                    lyric = "Daily quota exceeded"
-                else:
-                    lyric = "Something went wrong"
-                    print(e.args[0]["error"])
-            except:
-                lyric = "Something went wrong"
-                print(e)
-
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -279,7 +236,6 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -291,7 +247,6 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -310,7 +265,6 @@ async def play(ctx, *,keyw):
                     "url": url,
                     "title": info['title'],
                     "thumbnails": info["thumbnails"],
-                    "lyrics": lyric,
                     "raw": info
                 }
                 queues[ctx.guild.id].append(data)
@@ -373,9 +327,23 @@ async def listQueue(ctx, limit=10):
 @client.command()
 async def lyrics(ctx, index=0):
     out = ""
+
     if player[ctx.guild.id]:
-        out = f'**{player[ctx.guild.id]["title"]}**\n\n{player[ctx.guild.id]["lyrics"]}'
-        if len(player[ctx.guild.id]["lyrics"]) > 50:
+        try:
+            lyric = lyrics_api.get_lyrics(player[ctx.guild.id]['title'])['lyrics']
+        except LyricScraperException as e:
+            try:
+                if int(e.args[0]["error"]["code"]) == 429:
+                    lyric = "Daily quota exceeded"
+                else:
+                    lyric = "Something went wrong"
+                    print(e.args[0]["error"])
+            except:
+                lyric = "Something went wrong"
+                print(e)
+
+        out = f'**{player[ctx.guild.id]["title"]}**\n\n{lyric}'
+        if len(lyric) > 50:
             out = f'{out}\n\n**Lyrics provided by [genius.com](https://genius.com/)**'
         embed=discord.Embed(title="Lyrics", description=out, color=0xfe4b81)
     else:
