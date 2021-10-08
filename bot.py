@@ -49,6 +49,7 @@ async def check_queue(id, voice, ctx, msg=None):
             queues[id][0]["raw"] = info
 
         voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
+        msg = await ctx.send(embed=embed)
         await asyncio.sleep(1)
 
         # if anyhow system fails to play the audio it tries to play it again
@@ -59,7 +60,6 @@ async def check_queue(id, voice, ctx, msg=None):
             queues[id][0]["raw"] = info
             voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
 
-        msg = await ctx.send(embed=embed)
         current = queues[id].pop(0)
         player[ctx.guild.id] = current
         await check_queue(id, voice, ctx, msg)
