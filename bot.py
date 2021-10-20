@@ -53,12 +53,13 @@ async def check_queue(id, voice, ctx, msg=None):
         await asyncio.sleep(1)
 
         # if anyhow system fails to play the audio it tries to play it again
-        if not(voice.is_playing() or voice.is_paused()):
+        while not(voice.is_playing() or voice.is_paused()):
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(queues[id][0]["url"], download=False)
             queues[id][0]["link"] = info['url']
             queues[id][0]["raw"] = info
             voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
+            await asyncio.sleep(1)
 
         current = queues[id].pop(0)
         player[ctx.guild.id] = current
