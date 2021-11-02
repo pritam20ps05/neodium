@@ -273,6 +273,56 @@ async def play(ctx, *,keyw):
 
 
 
+@client.command(aliases=['l'])
+async def live(ctx, url=None):
+    opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'source_address': '0.0.0.0'
+    }
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    if url:
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
+                voice.play(source)
+
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+
+                msg = await ctx.send(embed=embed)
+
+                await check_queue(ctx.guild.id, voice, ctx, msg)
+            else:
+                embed=discord.Embed(title="Lives can't be queued", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+        else:
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
+                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
+                voice.play(source)
+
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+
+                msg = await ctx.send(embed=embed)
+
+                await check_queue(ctx.guild.id, voice, ctx, msg)
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10) 
+
+
+
 # shows the queued songs of the ctx guild
 @client.command(name="queue")
 async def listQueue(ctx, limit=10):
