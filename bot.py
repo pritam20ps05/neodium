@@ -39,30 +39,25 @@ async def check_queue(id, voice, ctx, msg=None):
     if msg:
         await msg.delete()
     if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
-        embed=discord.Embed(title="Currently Playing", description=f'[{queues[id][0]["title"]}]({queues[id][0]["url"]})', color=0xfe4b81)
-        embed.set_thumbnail(url=queues[id][0]["thumbnails"][len(queues[id][0]["thumbnails"])-1]["url"])
+        current = queues[id].pop(0)
+        player[ctx.guild.id] = current
 
-        # check if the playable link is expired or not(1 hr buffered) if yes then refetch the info
-        if int(queues[id][0]["link"].split("?")[1].split("&")[0].split("=")[1]) - int(time()) < 600:
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(queues[id][0]["url"], download=False)
-            queues[id][0]["link"] = info['url']
-            queues[id][0]["raw"] = info
+        embed=discord.Embed(title="Currently Playing", description=f'[{player[id]["title"]}]({player[id]["url"]})', color=0xfe4b81)
+        embed.set_thumbnail(url=player[id]["thumbnails"][len(player[id]["thumbnails"])-1]["url"])
 
-        voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
+        voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
         msg = await ctx.send(embed=embed)
         await asyncio.sleep(1)
 
         # if anyhow system fails to play the audio it tries to play it again
-        if not(voice.is_playing() or voice.is_paused()):
+        while not(voice.is_playing() or voice.is_paused()):
             with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(queues[id][0]["url"], download=False)
-            queues[id][0]["link"] = info['url']
-            queues[id][0]["raw"] = info
-            voice.play(FFmpegPCMAudio(queues[id][0]["link"], **FFMPEG_OPTIONS))
+                info = ydl.extract_info(player[id]["url"], download=False)
+            player[id]["link"] = info['url']
+            player[id]["raw"] = info
+            voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
+            await asyncio.sleep(1)
 
-        current = queues[id].pop(0)
-        player[ctx.guild.id] = current
         await check_queue(id, voice, ctx, msg)
     else:
         player[ctx.guild.id] = {}
@@ -276,6 +271,56 @@ async def play(ctx, *,keyw):
     except:
         embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+
+
+
+@client.command(aliases=['l'])
+async def live(ctx, url=None):
+    opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'source_address': '0.0.0.0'
+    }
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    if url:
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
+                voice.play(source)
+
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+
+                msg = await ctx.send(embed=embed)
+
+                await check_queue(ctx.guild.id, voice, ctx, msg)
+            else:
+                embed=discord.Embed(title="Lives can't be queued", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+        else:
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
+                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
+                voice.play(source)
+
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+
+                msg = await ctx.send(embed=embed)
+
+                await check_queue(ctx.guild.id, voice, ctx, msg)
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10) 
 
 
 
