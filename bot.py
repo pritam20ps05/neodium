@@ -7,7 +7,7 @@ from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
-from youtube_dl import YoutubeDL, utils
+from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from json import load, loads
 
@@ -290,8 +290,7 @@ async def live(ctx, url=None):
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
-                voice.play(source)
+                voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
 
                 embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
                 embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
@@ -309,8 +308,7 @@ async def live(ctx, url=None):
                 masters[ctx.guild.id] = ctx.message.author
                 queues[ctx.guild.id] = []
                 player[ctx.guild.id] = {}
-                source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **FFMPEG_OPTIONS)
-                voice.play(source)
+                voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
 
                 embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
                 embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
