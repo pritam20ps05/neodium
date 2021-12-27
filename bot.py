@@ -2,7 +2,7 @@ import discord
 import urllib.request
 import re
 import asyncio
-from time import time
+from os import environ
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
@@ -16,11 +16,9 @@ YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
-with open("credentials.json", "r") as creds:
-    cred = load(creds)
-    token = cred["token"]
-    search_engine = cred["search_engine"]
-    search_token = cred["search_token"]
+token = environ["TOKEN"]
+search_engine = environ["SEARCH_ENGINE"]
+search_token = environ["SEARCH_TOKEN"]
 
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
