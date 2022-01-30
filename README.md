@@ -1,6 +1,6 @@
 # Neodium
 
-Neodium is a discord music bot with many advanced features. This bot has been made to fill the place of groovy and make it open-source so that anyone can use it. With a First come First serve and task clearing queueing system.
+Neodium is a discord music bot with many advanced features. This bot has been made to fill the place of groovy and make it open-source so that anyone can use it. With a First come First serve and task clearing queueing system that is when a queued audio is played it gets removed from the queue so the next audio in the queue can be played.
 
 ## Key Features
 
@@ -8,26 +8,26 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 2. Advanced No disturb: You can lock the player by using -lock command and anyone will not be able to clear the queue and pause, resume, skip or stop the player except who initiated the lock. In future planning to add a voting system.
 3. Live Feature: The bot can play live youtube videos using -live or -l <youtube live url> 
 
-**NOTE: These are the only the exclusive features that other bots don't have. For full usage check usage section**
+**NOTE: These are the only the exclusive features that other bots generally don't have. For full usage check usage section**
 
 ## Usage/Commands
 
--add-playlist <playlist url>: To add a playlist to queue  
--clear-queue: Can only be done if there is no lock initiated. Clears the queue.  
--help: Shows help message.  
--join: Makes the bot join a VC.         
--leave: Makes the bot leave the VC.  
--live <video url>: Plays the live youtube video.   
--lock: Locks the player and the queue.  
--lyrics: Displays lyrics of the current song.  
--pause: Pauses player.  
--play <keyword>: Searches the keyword on youtube and plays the first result.   
--queue: Displays the songs currently in queue.  
--remove <index no>: Removes a mentioned song from queue.       
--resume: Resumes the player.  
--search <keyword>: Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
--skip: Skips the current song.  
--stop: Stops the player from playing anything else.  
+**-add-playlist** [playlist url] : To add a playlist to queue  
+**-clear-queue** or **-clear** : Can only be done if there is no lock initiated. Clears the queue.  
+**-help** : Shows help message.  
+**-join** : Makes the bot join a VC.         
+**-leave** : Makes the bot leave the VC.  
+**-live** or **-l** [video url] : Plays the live youtube video.   
+**-lock** : Locks the player and the queue.  
+**-lyrics** : Displays lyrics of the current song.  
+**-pause** : Pauses player.  
+**-play** or **-p** [keyword] : Searches the keyword on youtube and plays the first result.   
+**-queue** : Displays the songs currently in queue.  
+**-remove** [index no] : Removes a mentioned song from queue.       
+**-resume** : Resumes the player.  
+**-search** or **-s** [keyword] : Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
+**-skip** : Skips the current song.  
+**-stop** : Stops the player from playing anything else.  
 
 ## Installation/Setup
 
