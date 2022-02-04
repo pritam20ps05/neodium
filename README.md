@@ -22,7 +22,7 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 **-lyrics** : Displays lyrics of the current song.  
 **-pause** : Pauses player.  
 **-play** or **-p** [keyword] : Searches the keyword on youtube and plays the first result.   
-**-queue** : Displays the songs currently in queue.  
+**-queue** [delimeter] : Displays the songs currently in queue.  
 **-remove** [index no] : Removes a mentioned song from queue.       
 **-resume** : Resumes the player.  
 **-search** or **-s** [keyword] : Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
