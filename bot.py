@@ -11,10 +11,16 @@ from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from json import load, loads
 
-# need a way to actually store cookies.txt remotely
-YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True', 'source_address': '0.0.0.0', 'cookiefile': 'cookies.txt'}
+YDL_OPTIONS = {
+    'format': 'bestaudio', 
+    'noplaylist': 'True', 
+    'source_address': '0.0.0.0'
+    }
+
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
+    'options': '-vn'
+    }
 
 token = environ["TOKEN"]
 search_engine = environ["SEARCH_ENGINE"]
@@ -65,7 +71,7 @@ async def check_queue(id, voice, ctx, msg=None):
 # a asyncronus function to get video details because normally some timeout issue occurs but this is slower
 async def addsongs(entries, ctx):
     for song in entries:
-        url = "https://www.youtube.com/watch?v=" + song["url"]
+        url = song["url"]
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
         
