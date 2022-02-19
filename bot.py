@@ -72,17 +72,20 @@ async def check_queue(id, voice, ctx, msg=None):
 async def addsongs(entries, ctx):
     for song in entries:
         url = song["url"]
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        
-        data = {
-            "link": info['url'],
-            "url": url,
-            "title": info['title'],
-            "thumbnails": info["thumbnails"],
-            "raw": info
-        }
-        queues[ctx.guild.id].append(data)
+        try:
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+            
+            data = {
+                "link": info['url'],
+                "url": url,
+                "title": info['title'],
+                "thumbnails": info["thumbnails"],
+                "raw": info
+            }
+            queues[ctx.guild.id].append(data)
+        except Exception as e:
+            print(e)
         await asyncio.sleep(2)
     embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
     await ctx.send(embed=embed)
