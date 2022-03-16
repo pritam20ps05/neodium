@@ -427,7 +427,7 @@ async def removeQueueSong(ctx, index: int):
 
 
 @client.command(name="add-playlist")
-async def addPlaylist(ctx, link: str):
+async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     # user link formatting
@@ -449,7 +449,17 @@ async def addPlaylist(ctx, link: str):
         }
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(link, download=False)
-        embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
+            
+        # Entry slicing
+        info["entries"] = info["entries"][sp:ep]
+
+        if sp or ep:
+            if ep:
+                embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {ep}**', color=0xfe4b81)
+            else:
+                embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {len(info["entries"])+sp}**', color=0xfe4b81)
+        else:
+            embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
@@ -489,9 +499,10 @@ async def addPlaylist(ctx, link: str):
         await ctx.send(embed=embed, delete_after=10)
     except RuntimeError as e:
         print(e)
-    except:
+    except Exception as e:
         embed=discord.Embed(title="can't queue the requested playlist", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+        raise e
 
 
 
