@@ -12,7 +12,7 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 
 ## Usage/Commands
 
-**-add-playlist** [playlist url] : To add a playlist to queue  
+**-add-playlist** [playlist url] [starting index] [ending index]: To add a playlist to queue  
 **-clear-queue** or **-clear** : Can only be done if there is no lock initiated. Clears the queue.  
 **-help** : Shows help message.  
 **-join** : Makes the bot join a VC.         
