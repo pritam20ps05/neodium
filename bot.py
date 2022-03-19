@@ -212,9 +212,10 @@ async def search(ctx, *,keyw):
     except asyncio.TimeoutError:
         # await emb.delete()
         pass
-    except:
+    except Exception as e:
         embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+        raise e
 
 
 
@@ -277,9 +278,10 @@ async def play(ctx, *,keyw):
             else:
                 embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
-    except:
+    except Exception as e:
         embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+        raise e
 
 
 
