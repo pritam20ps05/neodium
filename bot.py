@@ -9,7 +9,8 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from json import load, loads
+from NeodiumDownload import YTdownload, INSdownload
+from json import load
 
 YDL_OPTIONS = {
     'format': 'bestaudio', 
@@ -30,6 +31,8 @@ with open("credentials.json", "r") as creds:
 
 client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
+yt_dl_instance = YTdownload(client)
+in_dl_instance = INSdownload(client)
 
 player = {}
 masters = {}
@@ -699,6 +702,37 @@ async def lock(ctx):
     else:
         embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+
+
+
+@client.command(name='download', aliases=['d'])
+async def dl_yt(ctx, url: str):
+    voice = get(client.voice_clients, guild=ctx.guild)
+
+    if voice:
+        # check if the bot is already playing
+        if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+            await yt_dl_instance.downloadVideo(ctx, url)
+        else:
+            embed=discord.Embed(title="Can\'t download while playing something", description="This restriction has been implemented in order to avoid throttling. If any problem still arises then kindly report it to the dev.", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=15)
+    else: 
+        await yt_dl_instance.downloadVideo(ctx, url)
+
+
+@client.command(name='download-insta', aliases=['di'])
+async def dl_insta(ctx, url: str):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    
+    if voice:
+        # check if the bot is already playing
+        if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+            await in_dl_instance.downloadVideo(ctx, url)
+        else:
+            embed=discord.Embed(title="Can\'t download while playing something", description="This restriction has been implemented in order to avoid throttling. If any problem still arises then kindly report it to the dev.", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=15)
+    else: 
+        await in_dl_instance.downloadVideo(ctx, url)
 
 
 client.run(token)
