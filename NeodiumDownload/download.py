@@ -42,7 +42,7 @@ class Downloader():
             info, video_resolutions = self.getUrlInfo(url)
         except utils.DownloadError as e:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=15)
             raise e
         video_title = info['title']
         title = 'Available formats for'
@@ -92,11 +92,8 @@ class Downloader():
             ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
             with YoutubeDL(ytops) as ydl:
                 info = ydl.extract_info(url, download=True)
-
-            title = info['title']
-            re = info['resolution']
-            filename = f'{title}_[{re}].{ext}'
-            filepath = f'{tempdirname}/{filename}'
+                filepath = ydl.prepare_filename(info)
+                filename = filepath.split('/')[-1]
 
             try:
                 embed=discord.Embed(title='Your file is ready to download', color=0xfe4b81)
@@ -128,7 +125,7 @@ class INSdownload(Downloader):
                 info = ydl.extract_info(url, download=False)
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
             embed=discord.Embed(title='The link might not be AV or the account is private', color=0xfe4b81)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=15)
             raise e
         except Exception as e:
             raise e
