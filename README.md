@@ -28,6 +28,7 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 **-search** or **-s** [keyword] : Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
 **-skip** : Skips the current song.  
 **-stop** : Stops the player from playing anything else.  
+**-download** or **-d** [video url]: Downloads the YT video, Instagram video or reel in the url.  
 
 ## Installation/Setup
 
