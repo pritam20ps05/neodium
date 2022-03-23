@@ -10,13 +10,12 @@ from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from NeodiumDownload import YTdownload, INSdownload
-from json import load
 
 YDL_OPTIONS = {
     'format': 'bestaudio', 
     'noplaylist': 'True', 
     'source_address': '0.0.0.0',
-    "cookiefile": "cookies.txt"
+    "cookiefile": "yt_cookies.txt"
     }
 
 FFMPEG_OPTIONS = {
@@ -139,7 +138,7 @@ async def search(ctx, *,keyw):
         'forcetitle': True, 
         'forceurl': True,
         'source_address': '0.0.0.0',
-        "cookiefile": "cookies.txt"
+        "cookiefile": "yt_cookies.txt"
     }
 
     with YoutubeDL(opts) as ydl:
@@ -294,7 +293,7 @@ async def live(ctx, url=None):
         'format': 'bestaudio/best',
         'noplaylist': True,
         'source_address': '0.0.0.0',
-        "cookiefile": "cookies.txt"
+        "cookiefile": "yt_cookies.txt"
     }
     voice = get(client.voice_clients, guild=ctx.guild)
 
@@ -454,7 +453,7 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
         opts = {
             "extract_flat": True,
             "source_address": "0.0.0.0",
-            "cookiefile": "cookies.txt"
+            "cookiefile": "yt_cookies.txt"
         }
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(link, download=False)
