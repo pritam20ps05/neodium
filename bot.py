@@ -707,7 +707,7 @@ async def lock(ctx):
 
 
 @client.command(name='download', aliases=['d'])
-async def dl_yt(ctx, url: str):
+async def dl_yt(ctx, url: str, copt: int = 0):
     def check_url(url: str):
         uw = url.split("://")
         if uw[0] == 'https' or uw[0] == 'http':
@@ -728,9 +728,9 @@ async def dl_yt(ctx, url: str):
         # check if the bot is already playing
         if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
             if url_type == 1:
-                await yt_dl_instance.downloadVideo(ctx, url)
+                await yt_dl_instance.downloadVideo(ctx, url, copt)
             elif url_type == 2:
-                await in_dl_instance.downloadVideo(ctx, url)
+                await in_dl_instance.downloadVideo(ctx, url, copt)
             else:
                 embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=15)
@@ -739,9 +739,9 @@ async def dl_yt(ctx, url: str):
             await ctx.send(embed=embed, delete_after=15)
     else:
         if url_type == 1:
-            await yt_dl_instance.downloadVideo(ctx, url)
+            await yt_dl_instance.downloadVideo(ctx, url, copt)
         elif url_type == 2:
-            await in_dl_instance.downloadVideo(ctx, url)
+            await in_dl_instance.downloadVideo(ctx, url, copt)
         else:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)

@@ -2,6 +2,7 @@ import tempfile
 import discord
 import requests
 import random
+import subprocess
 from discord.ext import commands
 from string import ascii_letters
 from discord import SelectMenu, SelectOption
@@ -15,6 +16,16 @@ class FileBin():
         dl_url = api+r['bin']['id']+'/'+r['file']['filename']
         return dl_url
 
+def ffmpegPostProcessor(inputfile, vc, ac, ext):
+    outfilename = inputfile.split('/')[-1]
+    outfiledir = '/'.join(inputfile.split('/')[:-1])+'/output/'
+    outfile_name = outfilename.split('.')
+    outfile_name[-1] = ext
+    outfile = outfiledir+'.'.join(outfile_name)
+    subprocess.run(['mkdir', outfiledir])
+    subprocess.run(['ffmpeg', '-i', inputfile, '-c:v', vc, '-c:a', ac, outfile])
+    return outfile
+
 class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
         self.client = client
@@ -22,9 +33,11 @@ class Downloader():
             'cookiefile': cookie_file,
             'noplaylist': True
         }
+        self.vcodecs = ['h264', 'copy']
 
     def getUrlInfo(self, url: str):
         video_resolutions = []
+        video_formats = []
         try:
             with YoutubeDL({'noplaylist': True}) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -32,14 +45,15 @@ class Downloader():
             raise e
         
         for format in info['formats']:
-            if format['format_note'][-1] == 'p' and format['format_note'] not in video_resolutions:
+            if 'p' in format['format_note'] and format['format_note'] not in video_resolutions:
                 video_resolutions.append(format['format_note'])
+                video_formats.append(format['format_id'])
 
-        return info, video_resolutions
+        return info, video_resolutions, video_formats
 
-    async def getUserChoice(self, ctx: commands.Context, url: str):
+    async def getUserChoice(self, ctx: commands.Context, url: str, copt: int):
         try:
-            info, video_resolutions = self.getUrlInfo(url)
+            info, video_resolutions, video_formats = self.getUrlInfo(url)
         except utils.DownloadError as e:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
@@ -48,9 +62,9 @@ class Downloader():
         title = 'Available formats for'
 
         options = []
-        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.webm'))
+        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
         for i, res in enumerate(video_resolutions):
-            options.append(SelectOption(emoji='🎥', label=res, value=f'{i+2}', description='.mp4'))
+            options.append(SelectOption(emoji='🎥', label=res, value=video_formats[i], description='.mp4'))
 
         embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
         emb = await ctx.send(embed=embed, components=[
@@ -71,19 +85,19 @@ class Downloader():
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
         if int(select_menu.values[0]) == 1:
             format = 'bestaudio'
-            ext = 'webm'
+            ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt)
         else:
-            resolution = video_resolutions[int(select_menu.values[0])-2][:-1]
-            format = f'bestvideo[height<={resolution}]+bestaudio/best[height<={resolution}]'
+            format_id = select_menu.values[0]
+            format = f'{format_id}+bestaudio/best'
             ext = 'mp4'
             embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt)
 
-    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str):
+    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int):
         ytops = self.dl_ytops
         ytops['format'] = format
         ytops['merge_output_format'] = ext
@@ -93,6 +107,7 @@ class Downloader():
             with YoutubeDL(ytops) as ydl:
                 info = ydl.extract_info(url, download=True)
                 filepath = ydl.prepare_filename(info)
+                filepath = ffmpegPostProcessor(filepath, self.vcodecs[copt], 'aac', ext)
                 filename = filepath.split('/')[-1]
 
             try:
@@ -111,15 +126,15 @@ class YTdownload(Downloader):
         cookie_file = 'yt_cookies.txt'
         super().__init__(client, cookie_file)
 
-    async def downloadVideo(self, ctx, url):
-        await self.getUserChoice(ctx, url)
+    async def downloadVideo(self, ctx, url, copt):
+        await self.getUserChoice(ctx, url, copt)
 
 class INSdownload(Downloader):
     def __init__(self, client: discord.Client):
         self.cookie_file = 'insta_cookies.txt'
         super().__init__(client, self.cookie_file)
 
-    async def downloadVideo(self, ctx, url):
+    async def downloadVideo(self, ctx, url, copt):
         try:
             with YoutubeDL({'cookiefile': self.cookie_file}) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -133,7 +148,7 @@ class INSdownload(Downloader):
         title = 'Available formats for'
 
         options = []
-        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.webm'))
+        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
         options.append(SelectOption(emoji='🎥', label='Audio and Video', value='2', description='.mp4'))
 
         embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
@@ -155,14 +170,14 @@ class INSdownload(Downloader):
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
         if int(select_menu.values[0]) == 1:
             format = 'bestaudio'
-            ext = 'webm'
+            ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt)
             
         else:
             format = 'bestvideo+bestaudio/best'
             ext = 'mp4'
             embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt)
