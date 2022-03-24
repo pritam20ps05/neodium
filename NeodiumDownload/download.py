@@ -86,14 +86,14 @@ class Downloader():
         if int(select_menu.values[0]) == 1:
             format = 'bestaudio'
             ext = 'm4a'
-            embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
         else:
             format_id = select_menu.values[0]
             format = f'{format_id}+bestaudio/best'
             ext = 'mp4'
-            embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
 
@@ -112,13 +112,13 @@ class Downloader():
 
             try:
                 embed=discord.Embed(title='Your file is ready to download', color=0xfe4b81)
-                await ctx.send(embed=embed, file=discord.File(filepath))
+                await ctx.send(embed=embed, file=discord.File(filepath), mention_author=True)
             except Exception as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
                 dl_url = FileBin.upload(filepath, filename)
                 embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, mention_author=True)
                 raise e
         
 class YTdownload(Downloader):
@@ -171,13 +171,13 @@ class INSdownload(Downloader):
         if int(select_menu.values[0]) == 1:
             format = 'bestaudio'
             ext = 'm4a'
-            embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
             
         else:
             format = 'bestvideo+bestaudio/best'
             ext = 'mp4'
-            embed=discord.Embed(title='Preparing your file please bear with us...', color=0xfe4b81)
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
