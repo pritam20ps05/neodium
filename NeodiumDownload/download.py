@@ -111,14 +111,16 @@ class Downloader():
                 filename = filepath.split('/')[-1]
 
             try:
-                embed=discord.Embed(title='Your file is ready to download', color=0xfe4b81)
-                await ctx.send(embed=embed, file=discord.File(filepath), mention_author=True)
+                embed=discord.Embed(title='Your file is ready to download', description=f'File requested by {ctx.author.mention}', color=0xfe4b81)
+                await ctx.send(embed=embed, file=discord.File(filepath))
+                await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
             except Exception as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
                 dl_url = FileBin.upload(filepath, filename)
-                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
-                await ctx.send(embed=embed, mention_author=True)
+                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
+                await ctx.send(embed=embed)
+                await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
                 raise e
         
 class YTdownload(Downloader):
