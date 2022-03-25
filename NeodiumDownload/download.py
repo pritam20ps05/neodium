@@ -1,30 +1,45 @@
 import tempfile
 import discord
-import requests
 import random
-import subprocess
+import asyncio
+import aiohttp
+import concurrent.futures
 from discord.ext import commands
 from string import ascii_letters
 from discord import SelectMenu, SelectOption
 from yt_dlp import YoutubeDL, utils
 
 class FileBin():
-    def upload(filepath: str, filename: str):
+    async def upload(filepath: str, filename: str):
         api = 'https://filebin.net/'
-        bin = ''.join(random.choice(ascii_letters) for i in range(18))
-        r = requests.post(f'{api}{bin}/{filename}', data=open(filepath, 'rb')).json()
+        bin = ''.join(random.choice(ascii_letters) for _ in range(18))
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f'{api}{bin}/{filename}', data=open(filepath, 'rb')) as resp:
+                r = await resp.json()
         dl_url = api+r['bin']['id']+'/'+r['file']['filename']
         return dl_url
 
-def ffmpegPostProcessor(inputfile, vc, ac, ext):
+async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfilename = inputfile.split('/')[-1]
     outfiledir = '/'.join(inputfile.split('/')[:-1])+'/output/'
     outfile_name = outfilename.split('.')
     outfile_name[-1] = ext
     outfile = outfiledir+'.'.join(outfile_name)
-    subprocess.run(['mkdir', outfiledir])
-    subprocess.run(['ffmpeg', '-i', inputfile, '-c:v', vc, '-c:a', ac, outfile])
+    mkprocess = await asyncio.create_subprocess_shell(f'mkdir {outfiledir}')
+    await mkprocess.wait()
+    ffprocess = await asyncio.create_subprocess_shell(f'ffmpeg -i \'{inputfile}\' -c:v {vc} -c:a {ac} \'{outfile}\'')
+    await ffprocess.wait()
     return outfile
+
+async def ydl_async(url, ytops, d):
+    def y_dl(url, ytops, d):
+        with YoutubeDL(ytops) as ydl:
+            info = ydl.extract_info(url, download=d)
+        return info
+    loop = asyncio.get_running_loop()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        result = await loop.run_in_executor(pool, y_dl, url, ytops, d)
+    return result
 
 class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
@@ -35,12 +50,11 @@ class Downloader():
         }
         self.vcodecs = ['h264', 'copy']
 
-    def getUrlInfo(self, url: str):
+    async def getUrlInfo(self, url: str):
         video_resolutions = []
         video_formats = []
         try:
-            with YoutubeDL({'noplaylist': True}) as ydl:
-                info = ydl.extract_info(url, download=False)
+            info = await ydl_async(url, {'noplaylist': True}, False)
         except Exception as e:
             raise e
         
@@ -53,7 +67,7 @@ class Downloader():
 
     async def getUserChoice(self, ctx: commands.Context, url: str, copt: int):
         try:
-            info, video_resolutions, video_formats = self.getUrlInfo(url)
+            info, video_resolutions, video_formats = await self.getUrlInfo(url)
         except utils.DownloadError as e:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
@@ -105,9 +119,9 @@ class Downloader():
         with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
             ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
             with YoutubeDL(ytops) as ydl:
-                info = ydl.extract_info(url, download=True)
+                info = await ydl_async(url, ytops, True)
                 filepath = ydl.prepare_filename(info)
-                filepath = ffmpegPostProcessor(filepath, self.vcodecs[copt], 'aac', ext)
+                filepath = await ffmpegPostProcessor(filepath, self.vcodecs[copt], 'aac', ext)
                 filename = filepath.split('/')[-1]
 
             try:
@@ -117,7 +131,7 @@ class Downloader():
             except Exception as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
-                dl_url = FileBin.upload(filepath, filename)
+                dl_url = await FileBin.upload(filepath, filename)
                 embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
                 await ctx.send(embed=embed)
                 await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
@@ -138,8 +152,7 @@ class INSdownload(Downloader):
 
     async def downloadVideo(self, ctx, url, copt):
         try:
-            with YoutubeDL({'cookiefile': self.cookie_file}) as ydl:
-                info = ydl.extract_info(url, download=False)
+            info = await ydl_async(url, {'cookiefile': self.cookie_file}, False)
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
             embed=discord.Embed(title='The link might not be AV or the account is private', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
