@@ -27,7 +27,7 @@ async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfile = outfiledir+'.'.join(outfile_name)
     mkprocess = await asyncio.create_subprocess_shell(f'mkdir {outfiledir}')
     await mkprocess.wait()
-    ffprocess = await asyncio.create_subprocess_shell(f'ffmpeg -i \'{inputfile}\' -c:v {vc} -c:a {ac} \'{outfile}\'')
+    ffprocess = await asyncio.create_subprocess_shell(f'ffmpeg -i \"{inputfile}\" -c:v {vc} -c:a {ac} \"{outfile}\"')
     await ffprocess.wait()
     return outfile
 
@@ -52,7 +52,6 @@ class Downloader():
 
     async def getUrlInfo(self, url: str):
         video_resolutions = []
-        video_formats = []
         try:
             info = await ydl_async(url, {'noplaylist': True}, False)
         except Exception as e:
@@ -61,13 +60,12 @@ class Downloader():
         for format in info['formats']:
             if 'p' in format['format_note'] and format['format_note'] not in video_resolutions:
                 video_resolutions.append(format['format_note'])
-                video_formats.append(format['format_id'])
 
-        return info, video_resolutions, video_formats
+        return info, video_resolutions
 
     async def getUserChoice(self, ctx: commands.Context, url: str, copt: int):
         try:
-            info, video_resolutions, video_formats = await self.getUrlInfo(url)
+            info, video_resolutions = await self.getUrlInfo(url)
         except utils.DownloadError as e:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
@@ -78,7 +76,7 @@ class Downloader():
         options = []
         options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
         for i, res in enumerate(video_resolutions):
-            options.append(SelectOption(emoji='🎥', label=res, value=video_formats[i], description='.mp4'))
+            options.append(SelectOption(emoji='🎥', label=res, value=res, description='.mp4'))
 
         embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
         emb = await ctx.send(embed=embed, components=[
@@ -97,15 +95,15 @@ class Downloader():
             return i.author == ctx.author and i.message == emb
 
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
-        if int(select_menu.values[0]) == 1:
+        if select_menu.values[0] == '1':
             format = 'bestaudio'
             ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
         else:
-            format_id = select_menu.values[0]
-            format = f'{format_id}+bestaudio/best'
+            format_note = select_menu.values[0]
+            format = f'bestvideo[format_note={format_note}]+bestaudio/best'
             ext = 'mp4'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
@@ -183,7 +181,7 @@ class INSdownload(Downloader):
             return i.author == ctx.author and i.message == emb
 
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
-        if int(select_menu.values[0]) == 1:
+        if select_menu.values[0] == '1':
             format = 'bestaudio'
             ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
