@@ -524,16 +524,16 @@ async def resume(ctx):
             if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
                 if not voice.is_playing():
                     voice.resume()
-                    await ctx.send(embed=embed)
+                    await ctx.send(embed=embed, delete_after=7)
             else:
                 embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
             if not voice.is_playing():
                 voice.resume()
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
@@ -551,16 +551,16 @@ async def pause(ctx):
             if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
                 if voice.is_playing():
                     voice.pause()
-                    await ctx.send(embed=embed)
+                    await ctx.send(embed=embed, delete_after=7)
             else:
                 embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
             if voice.is_playing():
                 voice.pause()
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
@@ -577,16 +577,16 @@ async def skip(ctx):
             if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
                 if voice.is_playing():
                     voice.stop()
-                    await ctx.send(embed=embed)
+                    await ctx.send(embed=embed, delete_after=7)
             else:
                 embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
         else:
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
             if voice.is_playing():
                 voice.stop()
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
@@ -602,14 +602,14 @@ async def stop(ctx):
     if voice:
         if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
             embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=7)
         else:
             queues[ctx.guild.id] = []
             queuelocks[ctx.guild.id] = {}
             queuelocks[ctx.guild.id]["lock"] = False
             if voice.is_playing():
                 voice.stop()
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=7)
     else:
         embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=7)
