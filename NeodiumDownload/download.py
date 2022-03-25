@@ -4,6 +4,7 @@ import random
 import asyncio
 import aiohttp
 import concurrent.futures
+from shlex import quote
 from discord.ext import commands
 from string import ascii_letters
 from discord import SelectMenu, SelectOption
@@ -27,7 +28,9 @@ async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfile = outfiledir+'.'.join(outfile_name)
     mkprocess = await asyncio.create_subprocess_shell(f'mkdir {outfiledir}')
     await mkprocess.wait()
-    ffprocess = await asyncio.create_subprocess_shell(f'ffmpeg -i \"{inputfile}\" -c:v {vc} -c:a {ac} \"{outfile}\"')
+    inputfile_sh = quote(inputfile)
+    outfile_sh = quote(outfile)
+    ffprocess = await asyncio.create_subprocess_shell(f'ffmpeg -i {inputfile_sh} -c:v {vc} -c:a {ac} {outfile_sh}')
     await ffprocess.wait()
     return outfile
 
