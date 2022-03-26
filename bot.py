@@ -706,6 +706,7 @@ async def lock(ctx):
 
 
 @client.command(name='download', aliases=['d'])
+@commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
 async def dl_yt(ctx, url: str, copt: int = 0):
     def check_url(url: str):
         uw = url.split("://")
@@ -746,5 +747,12 @@ async def dl_yt(ctx, url: str, copt: int = 0):
             await ctx.send(embed=embed, delete_after=15)
 
 
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MaxConcurrencyReached):
+        embed=discord.Embed(title="Please wait..", description="Someone else is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling as the bot is currently running on a free server.", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=20)
+    else:
+        raise error
 
 client.run(token)
