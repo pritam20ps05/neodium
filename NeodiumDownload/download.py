@@ -10,15 +10,6 @@ from string import ascii_letters
 from discord import SelectMenu, SelectOption
 from yt_dlp import YoutubeDL, utils
 
-class FileBin():
-    async def upload(filepath: str, filename: str):
-        api = 'https://filebin.net/'
-        bin = ''.join(random.choice(ascii_letters) for _ in range(18))
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f'{api}{bin}/{filename}', data=open(filepath, 'rb')) as resp:
-                r = await resp.json()
-        dl_url = api+r['bin']['id']+'/'+r['file']['filename']
-        return dl_url
 
 async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfilename = inputfile.split('/')[-1]
@@ -43,6 +34,17 @@ async def ydl_async(url, ytops, d):
     with concurrent.futures.ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(pool, y_dl, url, ytops, d)
     return result
+
+class FileBin():
+    async def upload(filepath: str, filename: str):
+        api = 'https://filebin.net/'
+        bin = ''.join(random.choice(ascii_letters) for _ in range(18))
+        async with aiohttp.ClientSession() as session:
+            with open(filepath, 'rb') as f:
+                async with session.post(f'{api}{bin}/{filename}', data=f) as resp:
+                    r = await resp.json()
+        dl_url = api+r['bin']['id']+'/'+r['file']['filename']
+        return dl_url
 
 class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
