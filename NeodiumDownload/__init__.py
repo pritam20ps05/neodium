@@ -1,1 +1,1 @@
-from .download import Downloader, YTdownload, INSdownload
+from .download import Downloader, YTdownload, INSdownload, private_login
