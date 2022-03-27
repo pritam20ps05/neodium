@@ -9,7 +9,7 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from NeodiumDownload import YTdownload, INSdownload, private_login
+from NeodiumDownload import YTdownload, INSdownload, private_login, ydl_async
 from json import load
 
 YDL_OPTIONS = {
@@ -61,8 +61,7 @@ async def check_queue(id, voice, ctx, msg=None):
 
         # if anyhow system fails to play the audio it tries to play it again
         while not(voice.is_playing() or voice.is_paused()):
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(player[id]["url"], download=False)
+            info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
             player[id]["link"] = info['url']
             player[id]["raw"] = info
             voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
@@ -79,8 +78,7 @@ async def addsongs(entries, ctx):
     for song in entries:
         url = song["url"]
         try:
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(url, download=False)
+            info = await ydl_async(url, YDL_OPTIONS, False)
             
             data = {
                 "link": info['url'],
@@ -143,8 +141,7 @@ async def search(ctx, *,keyw):
         'source_address': '0.0.0.0'
     }
 
-    with YoutubeDL(opts) as ydl:
-        songs = ydl.extract_info(f'ytsearch5:{keyw}')
+    songs = await ydl_async(f'ytsearch5:{keyw}', opts, False)
 
     videos = songs["entries"]
 
@@ -233,8 +230,7 @@ async def play(ctx, *,keyw):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     try:
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = await ydl_async(url, YDL_OPTIONS, False)
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
@@ -299,8 +295,7 @@ async def live(ctx, url=None):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     if url:
-        with YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = await ydl_async(url, opts, False)
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -455,8 +450,7 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
             "extract_flat": True,
             "source_address": "0.0.0.0"
         }
-        with YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(link, download=False)
+        info = await ydl_async(link, opts, False)
             
         # Entry slicing
         info["entries"] = info["entries"][sp:ep]
