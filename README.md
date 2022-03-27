@@ -28,7 +28,9 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 **-search** or **-s** [keyword] : Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
 **-skip** : Skips the current song.  
 **-stop** : Stops the player from playing anything else.  
-**-download** or **-d** [video url] [codec option]: Downloads the YT video, Instagram video or reel in the url. For codec option 0(default) is v:h264, a:aac.  
+**-download** or **-d** [video url] [codec option]: Downloads the YT video, Instagram video or reel in the url. For codec option 0(default) is v:h264, a:aac. Also leaving it empty will make it try to fetch the content you are currently streaming.  
+**-login** [username] [password]: Logs into your instagram. Enables you to download private content also. NOTE: this command can only be used from DM.  
+**-logout** : Logs out of your already logged in instagram account.
 
 ## Installation/Setup
 
