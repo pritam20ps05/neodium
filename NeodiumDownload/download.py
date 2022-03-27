@@ -4,11 +4,14 @@ import random
 import asyncio
 import aiohttp
 import concurrent.futures
+from os import remove
 from shlex import quote
 from discord.ext import commands
+from json import load, dumps
 from string import ascii_letters
 from discord import SelectMenu, SelectOption
 from yt_dlp import YoutubeDL, utils
+from yt_dlp.extractor.instagram import InstagramBaseIE
 
 
 async def ffmpegPostProcessor(inputfile, vc, ac, ext):
@@ -100,7 +103,7 @@ class Downloader():
             return i.author == ctx.author and i.message == emb
 
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
-        if select_menu.values[0] == '1':
+        if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
@@ -114,10 +117,14 @@ class Downloader():
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, url, format, ext, copt)
 
-    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int):
-        ytops = self.dl_ytops
+    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int, usrcreds=None):
+        if usrcreds:
+            ytops = usrcreds
+        else:
+            ytops = self.dl_ytops
         ytops['format'] = format
         ytops['merge_output_format'] = ext
+        InstagramBaseIE._IS_LOGGED_IN = False
 
         with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
             ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
@@ -129,15 +136,23 @@ class Downloader():
 
             try:
                 embed=discord.Embed(title='Your file is ready to download', description=f'File requested by {ctx.author.mention}', color=0xfe4b81)
-                await ctx.send(embed=embed, file=discord.File(filepath))
-                await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                if usrcreds:
+                    await ctx.author.send(embed=embed, file=discord.File(filepath))
+                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                else:
+                    await ctx.send(embed=embed, file=discord.File(filepath))
+                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
             except Exception as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=10)
+                await ctx.send(embed=embed, delete_after=20)
                 dl_url = await FileBin.upload(filepath, filename)
                 embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
-                await ctx.send(embed=embed)
-                await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                if usrcreds:
+                    await ctx.author.send(embed=embed)
+                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                else:
+                    await ctx.send(embed=embed)
+                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
                 raise e
         
 class YTdownload(Downloader):
@@ -153,12 +168,24 @@ class INSdownload(Downloader):
         self.cookie_file = 'insta_cookies.txt'
         super().__init__(client, self.cookie_file)
 
-    async def downloadVideo(self, ctx, url, copt):
+    async def downloadVideo(self, ctx, url, copt, usrcreds):
+        if usrcreds:
+            ops = usrcreds
+        else:
+            ops = {
+                'cookiefile': self.cookie_file
+            }
+
+        InstagramBaseIE._IS_LOGGED_IN = False
         try:
-            info = await ydl_async(url, {'cookiefile': self.cookie_file}, False)
+            info = await ydl_async(url, ops, False)
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
-            embed=discord.Embed(title='The link might not be AV or the account is private', color=0xfe4b81)
-            await ctx.send(embed=embed, delete_after=15)
+            if usrcreds:
+                embed=discord.Embed(title='The link might not be AV or the account is private or try relogging', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=15)
+            else:
+                embed=discord.Embed(title='The link might not be AV or the account is private', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=15)
             raise e
         except Exception as e:
             raise e
@@ -186,16 +213,106 @@ class INSdownload(Downloader):
             return i.author == ctx.author and i.message == emb
 
         interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
-        if select_menu.values[0] == '1':
+        if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt, usrcreds)
             
         else:
             format = 'bestvideo+bestaudio/best'
             ext = 'mp4'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt)
+            await self.downloadAndSendFile(ctx, url, format, ext, copt, usrcreds)
+
+class private_login():
+    creds = {}
+    cred_path = ''
+    def __init__(self, cred_path):
+        private_login.cred_path = cred_path
+        
+        try:
+            with open(cred_path) as f:
+                private_login.creds = load(f)
+        except:
+            with open(cred_path, 'w') as f:
+                f.write('{}')
+            with open(cred_path) as f:
+                private_login.creds = load(f)
+
+    def flush_data(self):
+        dump_data = dumps(private_login.creds, indent=4)
+
+        with open(private_login.cred_path, "w") as outfile:
+            outfile.write(dump_data)
+
+    def unique_keygen(self, chs=6):
+        return ''.join(random.choice(ascii_letters) for _ in range(chs))
+
+    async def login(self, ctx: commands.Context, usrn, passw):
+        is_username_valid = True
+        is_password_valid = True
+        has_process_failed = False
+        ukey = self.unique_keygen()
+
+        if not self.is_user_authenticated(ctx.author.id):
+            ops = {
+                'username': usrn,
+                'password': passw,
+                'extract_flat': True,
+                'cookiefile': f'userdata/{ukey}_cookie.txt'
+            }
+            InstagramBaseIE._IS_LOGGED_IN = False
+
+            try:
+                _ = await ydl_async('https://www.instagram.com/p/Cbj-9Tglk_i/', ops, False)
+            except utils.DownloadError as e:
+                if 'The username you entered doesn\'t belong to an account' in e.msg:
+                    is_username_valid = False
+                elif 'your password was incorrect' in e.msg:
+                    is_password_valid = False
+                else:
+                    has_process_failed = True
+                    print(e)
+            except Exception as e:
+                has_process_failed = True
+                print(e)
+
+            if is_username_valid and is_password_valid and not has_process_failed:
+                private_login.creds[str(ctx.author.id)] = {
+                    'cookiefile': f'userdata/{ukey}_cookie.txt'
+                }
+                self.flush_data()
+                embed=discord.Embed(title='You have been successfully authenticated', color=0xfe4b81)
+                await ctx.send(embed=embed)
+            elif has_process_failed:
+                embed=discord.Embed(title='The authentication was not successfull', description='The authentication was not possible due to some reason. Make sure you have 2 factor auth disabled on your account. If the problem continues report it to the dev', color=0xfe4b81)
+                await ctx.send(embed=embed)
+            elif not is_username_valid:
+                embed=discord.Embed(title='Invalid username', color=0xfe4b81)
+                await ctx.send(embed=embed)
+            elif not is_password_valid:
+                embed=discord.Embed(title='Invalid password', color=0xfe4b81)
+                await ctx.send(embed=embed)
+
+    def is_user_authenticated(self, uid: str):
+        if str(uid) in private_login.creds.keys():
+            return True
+        else:
+            return False
+
+    def get_usercreds(self, uid: str):
+        if self.is_user_authenticated(str(uid)):
+            return private_login.creds[str(uid)]
+        else:
+            return None
+
+    async def logout(self, ctx: commands.Context):
+        if self.is_user_authenticated(ctx.author.id):
+            data = private_login.creds.pop(str(ctx.author.id))
+            remove(data['cookiefile'])
+            self.flush_data()
+            embed=discord.Embed(title='You have been successfully logged out of your account', color=0xfe4b81)
+            await ctx.send(embed=embed)

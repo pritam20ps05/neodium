@@ -9,7 +9,8 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from NeodiumDownload import YTdownload, INSdownload
+from NeodiumDownload import YTdownload, INSdownload, private_login, ydl_async
+from json import load
 
 YDL_OPTIONS = {
     'format': 'bestaudio', 
@@ -31,6 +32,7 @@ client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
 yt_dl_instance = YTdownload(client)
 in_dl_instance = INSdownload(client)
+private_instance = private_login('login.json')
 
 player = {}
 masters = {}
@@ -58,8 +60,7 @@ async def check_queue(id, voice, ctx, msg=None):
 
         # if anyhow system fails to play the audio it tries to play it again
         while not(voice.is_playing() or voice.is_paused()):
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(player[id]["url"], download=False)
+            info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
             player[id]["link"] = info['url']
             player[id]["raw"] = info
             voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
@@ -76,8 +77,7 @@ async def addsongs(entries, ctx):
     for song in entries:
         url = song["url"]
         try:
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(url, download=False)
+            info = await ydl_async(url, YDL_OPTIONS, False)
             
             data = {
                 "link": info['url'],
@@ -141,8 +141,7 @@ async def search(ctx, *,keyw):
         "cookiefile": "yt_cookies.txt"
     }
 
-    with YoutubeDL(opts) as ydl:
-        songs = ydl.extract_info(f'ytsearch5:{keyw}')
+    songs = await ydl_async(f'ytsearch5:{keyw}', opts, False)
 
     videos = songs["entries"]
 
@@ -231,8 +230,7 @@ async def play(ctx, *,keyw):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     try:
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = await ydl_async(url, YDL_OPTIONS, False)
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
@@ -298,8 +296,7 @@ async def live(ctx, url=None):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     if url:
-        with YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = await ydl_async(url, opts, False)
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                 masters[ctx.guild.id] = ctx.message.author
@@ -455,8 +452,7 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
             "source_address": "0.0.0.0",
             "cookiefile": "yt_cookies.txt"
         }
-        with YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(link, download=False)
+        info = await ydl_async(link, opts, False)
             
         # Entry slicing
         info["entries"] = info["entries"][sp:ep]
@@ -708,45 +704,67 @@ async def lock(ctx):
 
 @client.command(name='download', aliases=['d'])
 @commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
-async def dl_yt(ctx, url: str, copt: int = 0):
+async def dl_yt(ctx, url: str = None, copt: int = 0):
     def check_url(url: str):
-        uw = url.split("://")
-        if uw[0] == 'https' or uw[0] == 'http':
-            uweb = uw[1].split('/')[0]
-            if 'youtube' in uweb or 'youtu.be' in uweb:
-                return 1
-            elif 'instagram' in uweb:
-                return 2
+        if url:
+            uw = url.split("://")
+            if uw[0] == 'https' or uw[0] == 'http':
+                uweb = uw[1].split('/')[0]
+                if 'youtube' in uweb or 'youtu.be' in uweb:
+                    return 1
+                elif 'instagram' in uweb:
+                    return 2
+                else:
+                    return 0
             else:
                 return 0
         else:
             return 0
         
+    if not url and player[ctx.guild.id] != {}:
+        url = player[ctx.guild.id]['url']
+
     url_type: int = check_url(url)
-    voice = get(client.voice_clients, guild=ctx.guild)
-
-    if voice:
-        # check if the bot is already playing
-        if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-            if url_type == 1:
-                await yt_dl_instance.downloadVideo(ctx, url, copt)
-            elif url_type == 2:
-                await in_dl_instance.downloadVideo(ctx, url, copt)
-            else:
-                embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=15)
-        else:
-            embed=discord.Embed(title="Can\'t download while playing something", description="This restriction has been implemented in order to avoid throttling. If any problem still arises then kindly report it to the dev.", color=0xfe4b81)
-            await ctx.send(embed=embed, delete_after=15)
+    if url_type == 1:
+        await yt_dl_instance.downloadVideo(ctx, url, copt)
+    elif url_type == 2:
+        usrcreds = private_instance.get_usercreds(ctx.author.id)
+        await in_dl_instance.downloadVideo(ctx, url, copt, usrcreds)
     else:
-        if url_type == 1:
-            await yt_dl_instance.downloadVideo(ctx, url, copt)
-        elif url_type == 2:
-            await in_dl_instance.downloadVideo(ctx, url, copt)
-        else:
-            embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
-            await ctx.send(embed=embed, delete_after=15)
+        embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=15)
 
+
+@client.command()
+async def login(ctx, usrn=None, passw=None):
+    if isinstance(ctx.channel, discord.DMChannel):
+        if usrn and passw:
+            await private_instance.login(ctx, usrn, passw)
+    else:
+        embed=discord.Embed(title='Hey use this command here', description='Login command can only be used from the DM. This helps us keep your credentials private.', color=0xfe4b81)
+        await ctx.author.send(embed=embed, delete_after=30)
+
+@client.command()
+async def logout(ctx):
+    if private_instance.is_user_authenticated(ctx.author.id):
+        embed=discord.Embed(title="Do you really want to logout", color=0xfe4b81)
+        emb = await ctx.send(embed=embed)
+
+        try:
+            await emb.add_reaction('👍')
+            await emb.add_reaction('🚫')
+            
+            def chk(reaction, user):
+                return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+            
+            react, user = await client.wait_for('reaction_add', check=chk, timeout=30.0)
+            if react.emoji == "👍":
+                await private_instance.logout(ctx)
+                await emb.delete()
+            else:
+                await emb.delete()
+        except asyncio.TimeoutError:
+            await emb.delete()
 
 @client.event
 async def on_command_error(ctx, error):
