@@ -78,7 +78,8 @@ async def addsongs(entries, ctx):
     for song in entries:
         url = song["url"]
         try:
-            info = await ydl_async(url, YDL_OPTIONS, False)
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
             
             data = {
                 "link": info['url'],
@@ -434,11 +435,9 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     # user link formatting
-    if link.split("?")[0] == "https://www.youtube.com/watch":
-        id_frt = link.split("?")[1].split("&")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
-        link = "https://www.youtube.com/playlist?" + id_frt
-    elif link.split("?")[0] == "https://www.youtube.com/playlist":
-        pass
+    if "list=" in link:
+        id_frt = link.split("list=")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
+        link = "https://www.youtube.com/playlist?list=" + id_frt
     else:
         # promt with invalid link
         embed=discord.Embed(title="Invalid link", color=0xfe4b81)
