@@ -44,32 +44,33 @@ queuelocks = {}
 
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg=None):
-    while voice.is_playing() or voice.is_paused():
-        await asyncio.sleep(5)
-    if msg:
-        await msg.delete()
-    if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
-        current = queues[id].pop(0)
-        player[ctx.guild.id] = current
-
-        embed=discord.Embed(title="Currently Playing", description=f'[{player[id]["title"]}]({player[id]["url"]})', color=0xfe4b81)
-        embed.set_thumbnail(url=player[id]["thumbnails"][len(player[id]["thumbnails"])-1]["url"])
-
-        voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
-        msg = await ctx.send(embed=embed)
-        await asyncio.sleep(1)
-
-        # if anyhow system fails to play the audio it tries to play it again
-        while not(voice.is_playing() or voice.is_paused()):
-            info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
-            player[id]["link"] = info['url']
-            player[id]["raw"] = info
+    while True:
+        while voice.is_playing() or voice.is_paused():
+            await asyncio.sleep(5)
+        if msg:
+            await msg.delete()
+        if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
+            current = queues[id].pop(0)
+            player[ctx.guild.id] = current
+    
+            embed=discord.Embed(title="Currently Playing", description=f'[{player[id]["title"]}]({player[id]["url"]})', color=0xfe4b81)
+            embed.set_thumbnail(url=player[id]["thumbnails"][len(player[id]["thumbnails"])-1]["url"])
+    
             voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
+            msg = await ctx.send(embed=embed)
             await asyncio.sleep(1)
-
-        await check_queue(id, voice, ctx, msg)
-    else:
-        player[ctx.guild.id] = {}
+    
+            # if anyhow system fails to play the audio it tries to play it again
+            while not(voice.is_playing() or voice.is_paused()):
+                info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
+                player[id]["link"] = info['url']
+                player[id]["raw"] = info
+                voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
+                await asyncio.sleep(1)
+    
+        else:
+            player[ctx.guild.id] = {}
+            break
 
 
 
