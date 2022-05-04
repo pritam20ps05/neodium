@@ -43,32 +43,33 @@ queuelocks = {}
 
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg=None):
-    while voice.is_playing() or voice.is_paused():
-        await asyncio.sleep(5)
-    if msg:
-        await msg.delete()
-    if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
-        current = queues[id].pop(0)
-        player[ctx.guild.id] = current
-
-        embed=discord.Embed(title="Currently Playing", description=f'[{player[id]["title"]}]({player[id]["url"]})', color=0xfe4b81)
-        embed.set_thumbnail(url=player[id]["thumbnails"][len(player[id]["thumbnails"])-1]["url"])
-
-        voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
-        msg = await ctx.send(embed=embed)
-        await asyncio.sleep(1)
-
-        # if anyhow system fails to play the audio it tries to play it again
-        while not(voice.is_playing() or voice.is_paused()):
-            info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
-            player[id]["link"] = info['url']
-            player[id]["raw"] = info
+    while True:
+        while voice.is_playing() or voice.is_paused():
+            await asyncio.sleep(5)
+        if msg:
+            await msg.delete()
+        if queues[id] != [] and not (voice.is_playing() or voice.is_paused()):
+            current = queues[id].pop(0)
+            player[ctx.guild.id] = current
+    
+            embed=discord.Embed(title="Currently Playing", description=f'[{player[id]["title"]}]({player[id]["url"]})', color=0xfe4b81)
+            embed.set_thumbnail(url=player[id]["thumbnails"][len(player[id]["thumbnails"])-1]["url"])
+    
             voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
+            msg = await ctx.send(embed=embed)
             await asyncio.sleep(1)
-
-        await check_queue(id, voice, ctx, msg)
-    else:
-        player[ctx.guild.id] = {}
+    
+            # if anyhow system fails to play the audio it tries to play it again
+            while not(voice.is_playing() or voice.is_paused()):
+                info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
+                player[id]["link"] = info['url']
+                player[id]["raw"] = info
+                voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
+                await asyncio.sleep(1)
+    
+        else:
+            player[ctx.guild.id] = {}
+            break
 
 
 
@@ -77,7 +78,8 @@ async def addsongs(entries, ctx):
     for song in entries:
         url = song["url"]
         try:
-            info = await ydl_async(url, YDL_OPTIONS, False)
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
             
             data = {
                 "link": info['url'],
@@ -435,11 +437,9 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     # user link formatting
-    if link.split("?")[0] == "https://www.youtube.com/watch":
-        id_frt = link.split("?")[1].split("&")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
-        link = "https://www.youtube.com/playlist?" + id_frt
-    elif link.split("?")[0] == "https://www.youtube.com/playlist":
-        pass
+    if "list=" in link:
+        id_frt = link.split("list=")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
+        link = "https://www.youtube.com/playlist?list=" + id_frt
     else:
         # promt with invalid link
         embed=discord.Embed(title="Invalid link", color=0xfe4b81)
