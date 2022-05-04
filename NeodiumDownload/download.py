@@ -102,7 +102,7 @@ class Downloader():
         def check_selection(i: discord.Interaction, select_menu):
             return i.author == ctx.author and i.message == emb
 
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
+        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
         if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
@@ -212,7 +212,7 @@ class INSdownload(Downloader):
         def check_selection(i: discord.Interaction, select_menu):
             return i.author == ctx.author and i.message == emb
 
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection)
+        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
         if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
