@@ -24,6 +24,8 @@ FFMPEG_OPTIONS = {
     'options': '-vn'
     }
 
+getCookieFile()
+
 token = environ["TOKEN"]
 search_engine = environ["SEARCH_ENGINE"]
 search_token = environ["SEARCH_TOKEN"]
