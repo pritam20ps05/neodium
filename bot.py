@@ -9,7 +9,7 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from NeodiumDownload import YTdownload, INSdownload, private_login, ydl_async
+from NeodiumUtils import YTdownload, INSdownload, private_login, ydl_async, getCookieFile
 from json import load
 
 YDL_OPTIONS = {
@@ -22,6 +22,8 @@ FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
     'options': '-vn'
     }
+
+getCookieFile()
 
 with open("credentials.json", "r") as creds:
     cred = load(creds)
