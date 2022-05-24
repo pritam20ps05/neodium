@@ -226,15 +226,13 @@ async def search(ctx, *,keyw):
 
 # command to play sound from a keyword and queue a song if request is made during playing an audio
 @client.command(aliases=['p'])
-async def play(ctx, *,keyw):
-    html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + keyw.replace(" ", "+"))
-    video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-    url = "https://www.youtube.com/watch?v=" + video_ids[0]
-
+async def play(ctx, *, keyw):
     voice = get(client.voice_clients, guild=ctx.guild)
 
     try:
-        info = await ydl_async(url, YDL_OPTIONS, False)
+        info = await ydl_async(f'ytsearch:{keyw}', YDL_OPTIONS, False)
+        info = info['entries'][0]
+        url = info['webpage_url']
 
         if voice:
             if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
