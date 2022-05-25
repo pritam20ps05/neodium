@@ -65,6 +65,25 @@ def checkQueueLock(hard=False, check_if_bot_connected=False):
             raise QueueLockCheckFailure("I am currently not connected to any voice channel")
     return commands.check(predicate)
 
+def is_owner():
+    """A :func:`.check` that checks if the person invoking this command is the
+    owner of the bot.
+
+    This is powered by :meth:`.Bot.is_owner`.
+
+    This check raises a special exception, :exc:`.NotOwner` that is derived
+    from :exc:`.CheckFailure`. But returns allways true when invoked through help
+    """
+
+    async def predicate(ctx):
+        if ctx.invoked_with == 'help':
+            return True
+        if not await ctx.bot.is_owner(ctx.author):
+            raise commands.NotOwner('You do not own this bot.')
+        return True
+
+    return commands.check(predicate)
+
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg=None):
     while True:
@@ -133,7 +152,7 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
 
 
     # command for bot to join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in
-    @commands.command()
+    @commands.command(help='Makes the bot join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in. Only if you are not trying to disturb someone.')
     async def join(self, ctx):
         if ctx.message.author.voice:
             channel = ctx.message.author.voice.channel
@@ -157,7 +176,7 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
 
 
     # leaves the vc on demand
-    @commands.command(name='leave', help='To make the bot leave the voice channel')
+    @commands.command(help='Makes the bot leave the voice channel.')
     async def leave(self, ctx):
         voice_client = get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -181,8 +200,8 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
         self.bot = bot
 
 
-    @commands.command(aliases=['s'])
-    async def search(self, ctx, *,keyw):
+    @commands.command(aliases=['s'], help='Searches a query on YT and gives 5 results to choose from. Choosen one will be queued or played')
+    async def search(self, ctx, *, keyw):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
         opts = {
@@ -276,7 +295,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
     # command to play sound from a keyword and queue a song if request is made during playing an audio
-    @commands.command(aliases=['p'])
+    @commands.command(aliases=['p'], help='Searches a query on YT and plays or queues the most relevant result')
     async def play(self, ctx, *, keyw):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -338,7 +357,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    @commands.command(aliases=['l'])
+    @commands.command(aliases=['l'], help='Plays a YT live from the URL provided as input')
     async def live(self, ctx, url=None):
         opts = {
             'format': 'bestaudio/best',
@@ -386,7 +405,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    @commands.command(name="add-playlist")
+    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist.')
     async def addPlaylist(self, ctx, link: str, sp: int = None, ep: int = None):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -468,7 +487,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
     # shows the queued songs of the ctx guild
-    @commands.command(name="queue")
+    @commands.command(name="queue", help='Displays the current queue')
     async def listQueue(self, ctx, limit=10):
         out = ""
         pages = []
@@ -513,7 +532,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
 
-    @commands.command()
+    @commands.command(help='Displays the lyrics of the current song if available.')
     async def lyrics(self, ctx, index=0):
         out = ""
 
@@ -547,7 +566,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # removes a mentioned song from queue and displays it
-    @commands.command(name="remove")
+    @commands.command(name="remove", help='Removes an entry from the queue')
     @checkQueueLock(check_if_bot_connected=True)
     async def removeQueueSong(self, ctx, index: int):
         if (index<=len(queues[ctx.guild.id]) and index>0):
@@ -559,7 +578,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # command to pause voice if it is playing
-    @commands.command()
+    @commands.command(help='Pauses the current player')
     @checkQueueLock(check_if_bot_connected=True)
     async def pause(self, ctx):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
@@ -570,7 +589,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # command to resume voice if it is paused
-    @commands.command()
+    @commands.command(help='Resumes the paused player')
     @checkQueueLock(check_if_bot_connected=True)
     async def resume(self, ctx):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
@@ -581,7 +600,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # command to skip voice
-    @commands.command()
+    @commands.command(help='Skips current audio')
     @checkQueueLock(check_if_bot_connected=True)
     async def skip(self, ctx):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
@@ -592,7 +611,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # stops the bot player by clearing the current queue and skipping the current audio
-    @commands.command()
+    @commands.command(help='Just like skip but also clears the queue')
     @checkQueueLock(hard=True, check_if_bot_connected=True)
     async def stop(self, ctx):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
@@ -604,7 +623,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # command to clear queue
-    @commands.command(name="clear-queue", aliases=["clear"])
+    @commands.command(name="clear-queue", aliases=["clear"], help='Clears the queue')
     @checkQueueLock(hard=True, check_if_bot_connected=True)
     async def clearQueue(self, ctx):
         options = ["👍", "🚫"]
@@ -629,7 +648,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
             await emb.delete()
 
 
-    @commands.command()
+    @commands.command(help='Locks the queue and prevents anyone from damaging anyone\'s experience')
     async def lock(self, ctx):
         voice_client = get(self.bot.voice_clients, guild=ctx.guild)
         
@@ -663,7 +682,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
         self.bot = bot
 
 
-    @commands.command(name='download', aliases=['d'])
+    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. Also if the bot is already playing something then use `-d` or `-download` to download the files\' of that video')
     @commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
     async def dl_yt(self, ctx, url: str = None, copt: int = 0):
         def check_url(url: str):
@@ -696,7 +715,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
             await ctx.send(embed=embed, delete_after=15)
 
 
-    @commands.command()
+    @commands.command(help='Supports the instagram private feature. This command Logs in to your account and uses it to access files through your account. Once logged in use the download command normally. This command can only be used in DMs in order to protect your privacy.')
     async def login(self, ctx, usrn=None, passw=None):
         if isinstance(ctx.channel, discord.DMChannel):
             if usrn and passw:
@@ -705,7 +724,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
             embed=discord.Embed(title='Hey use this command here', description='Login command can only be used from the DM. This helps us keep your credentials private.', color=0xfe4b81)
             await ctx.author.send(embed=embed, delete_after=30)
 
-    @commands.command()
+    @commands.command(help='Logout of your account only if you are already logged in')
     async def logout(self, ctx):
         if private_instance.is_user_authenticated(ctx.author.id):
             embed=discord.Embed(title="Do you really want to logout", color=0xfe4b81)
@@ -733,15 +752,15 @@ class SpecialCommands(commands.Cog, name="Special", description="This category o
         self.bot = bot
 
 
-    @commands.command()
-    @commands.is_owner()
+    @commands.command(help='Refetches the default cookie files')
+    @is_owner()
     async def refetch(self, ctx, id_insta=None, id_yt=None):
         getCookieFile(id_insta, id_yt)
         embed=discord.Embed(title="Default cookies were refetched and refreshed successfully", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
 
-    @commands.command(name="add-cog")
-    @commands.is_owner()
+    @commands.command(name="add-cog", help='Adds a predefined cog to the bot')
+    @is_owner()
     async def addCog(self, ctx, cog_name):
         if cog_name != 'Special':
             for cog in cog_list:
@@ -750,8 +769,8 @@ class SpecialCommands(commands.Cog, name="Special", description="This category o
                     embed=discord.Embed(title=f"{cog_name} cog was added successfully", color=0xfe4b81)
                     await ctx.send(embed=embed, delete_after=20)
 
-    @commands.command(name="remove-cog")
-    @commands.is_owner()
+    @commands.command(name="remove-cog", help='Removes a already existing cog. Generally used to disable a functionality of the bot.')
+    @is_owner()
     async def removeCog(self, ctx, cog_name):
         if cog_name != 'Special':
             self.bot.remove_cog(cog_name)
