@@ -394,11 +394,10 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
             # check if the bot is already playing
             if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
                 await ctx.send(embed=embed)
-                loop = asyncio.get_event_loop()
                 coros = []
                 coros.append(addsongs(info["entries"], ctx))
                 coros.append(check_queue(ctx.guild.id, voice, ctx))
-                loop.run_until_complete(asyncio.gather(*coros))
+                asyncio.gather(*coros)
             else:
                 await ctx.send(embed=embed)
                 await addsongs(info["entries"], ctx)
@@ -410,11 +409,10 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
                 queues[ctx.guild.id] = []
                 player[ctx.guild.id] = {}
                 await ctx.send(embed=embed)
-                loop = asyncio.get_event_loop()
                 coros = []
                 coros.append(addsongs(info["entries"], ctx))
                 coros.append(check_queue(ctx.guild.id, voice, ctx))
-                loop.run_until_complete(asyncio.gather(*coros))
+                asyncio.gather(*coros)
             else:
                 embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=10)
