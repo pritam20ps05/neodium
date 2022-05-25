@@ -9,7 +9,7 @@ from discord import FFmpegPCMAudio
 from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
-from NeodiumUtils import YTdownload, INSdownload, private_login, ydl_async, getCookieFile
+from NeodiumUtils import *
 from json import load
 
 YDL_OPTIONS = {
@@ -42,6 +42,26 @@ queues = {}
 queuelocks = {}
 
 
+class QueueLockCheckFailure(commands.CheckFailure):
+    def __init__(self, message=None):
+        super().__init__(message)
+
+def checkQueueLock(hard=False, check_if_bot_connected=False):
+    async def predicate(ctx):
+        voice = get(client.voice_clients, guild=ctx.guild)
+        if voice or not check_if_bot_connected:
+            if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
+                if queuelocks[ctx.guild.id]["author"] == ctx.message.author and not hard:
+                    return True
+                else:
+                    raise QueueLockCheckFailure("The queue is currently locked")
+            else:
+                queuelocks[ctx.guild.id] = {}
+                queuelocks[ctx.guild.id]["lock"] = False
+                return True
+        else:
+            raise QueueLockCheckFailure("I am currently not connected to any voice channel")
+    return commands.check(predicate)
 
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg=None):
@@ -411,21 +431,11 @@ async def lyrics(ctx, index=0):
 
 # removes a mentioned song from queue and displays it
 @client.command(name="remove")
+@checkQueueLock(check_if_bot_connected=True)
 async def removeQueueSong(ctx, index: int):
-    voice = get(client.voice_clients, guild=ctx.guild)
-
-    if voice and (index<=len(queues[ctx.guild.id]) and index>0):
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
-                rem = queues[ctx.guild.id].pop(index-1)
-                embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
-            else:
-                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-        else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            rem = queues[ctx.guild.id].pop(index-1)
-            embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
+    if (index<=len(queues[ctx.guild.id]) and index>0):
+        rem = queues[ctx.guild.id].pop(index-1)
+        embed=discord.Embed(title="Removed from queue", description=f'[{rem["title"]}]({rem["url"]})', color=0xfe4b81)
     else:
         embed=discord.Embed(title="Invalid request", color=0xfe4b81)
     await ctx.send(embed=embed)
@@ -512,105 +522,47 @@ async def addPlaylist(ctx, link: str, sp: int = None, ep: int = None):
 
 # command to resume voice if it is paused
 @client.command()
+@checkQueueLock(check_if_bot_connected=True)
 async def resume(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Resuming...", color=0xfe4b81)
-
-    if voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
-                if not voice.is_playing():
-                    voice.resume()
-                    await ctx.send(embed=embed, delete_after=7)
-            else:
-                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=7)
-        else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            if not voice.is_playing():
-                voice.resume()
-                await ctx.send(embed=embed, delete_after=7)
-    else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+    if not voice.is_playing():
+        voice.resume()
         await ctx.send(embed=embed, delete_after=7)
-
 
 
 # command to pause voice if it is playing
 @client.command()
+@checkQueueLock(check_if_bot_connected=True)
 async def pause(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Pausing...", color=0xfe4b81)
-
-    if voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
-                if voice.is_playing():
-                    voice.pause()
-                    await ctx.send(embed=embed, delete_after=7)
-            else:
-                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=7)
-        else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            if voice.is_playing():
-                voice.pause()
-                await ctx.send(embed=embed, delete_after=7)
-    else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+    if voice.is_playing():
+        voice.pause()
         await ctx.send(embed=embed, delete_after=7)
 
 
 # command to skip voice
 @client.command()
+@checkQueueLock(check_if_bot_connected=True)
 async def skip(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Skipping...", color=0xfe4b81)
-
-    if voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            if queuelocks[ctx.guild.id]["author"] == ctx.message.author:
-                if voice.is_playing():
-                    voice.stop()
-                    await ctx.send(embed=embed, delete_after=7)
-            else:
-                embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=7)
-        else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            if voice.is_playing():
-                voice.stop()
-                await ctx.send(embed=embed, delete_after=7)
-    else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+    if voice.is_playing():
+        voice.stop()
         await ctx.send(embed=embed, delete_after=7)
-
 
 
 # stops the bot player by clearing the current queue and skipping the current audio
 @client.command()
+@checkQueueLock(hard=True, check_if_bot_connected=True)
 async def stop(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
     embed=discord.Embed(title="Stopping...", color=0xfe4b81)
-
-    if voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
-            await ctx.send(embed=embed, delete_after=7)
-        else:
-            queues[ctx.guild.id] = []
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            if voice.is_playing():
-                voice.stop()
-                await ctx.send(embed=embed, delete_after=7)
-    else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
+    queues[ctx.guild.id] = []
+    if voice.is_playing():
+        voice.stop()
         await ctx.send(embed=embed, delete_after=7)
-
 
 
 # leaves the vc on demand
@@ -635,41 +587,28 @@ async def leave(ctx):
 
 # command to clear queue
 @client.command(name="clear-queue", aliases=["clear"])
+@checkQueueLock(hard=True, check_if_bot_connected=True)
 async def clearQueue(ctx):
-    voice = get(client.voice_clients, guild=ctx.guild)
-    # embed=discord.Embed(title="Stopping...", color=0xfe4b81)
     options = ["👍", "🚫"]
-
-    if voice:
-        if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
-            embed=discord.Embed(title="The queue is currently locked", color=0xfe4b81)
+    embed=discord.Embed(title="Do you really want to clear the queue", color=0xfe4b81)
+    emb = await ctx.send(embed=embed)
+    try:
+        for option in options:
+            await emb.add_reaction(option)
+        
+        def chk(reaction, user):
+            return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+        
+        react, user = await client.wait_for('reaction_add', check=chk, timeout=30.0)
+        if react.emoji == "👍":
+            queues[ctx.guild.id] = []
+            await emb.delete()
+            embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
             await ctx.send(embed=embed)
         else:
-            queuelocks[ctx.guild.id] = {}
-            queuelocks[ctx.guild.id]["lock"] = False
-            embed=discord.Embed(title="Do you really want to clear the queue", color=0xfe4b81)
-            emb = await ctx.send(embed=embed)
-
-            try:
-                for option in options:
-                    await emb.add_reaction(option)
-                
-                def chk(reaction, user):
-                    return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
-                
-                react, user = await client.wait_for('reaction_add', check=chk, timeout=30.0)
-                if react.emoji == "👍":
-                    queues[ctx.guild.id] = []
-                    await emb.delete()
-                    embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
-                    await ctx.send(embed=embed)
-                else:
-                    await emb.delete()
-            except asyncio.TimeoutError:
-                await emb.delete()
-    else:
-        embed=discord.Embed(title="I am currently not connected to any voice channel", color=0xfe4b81)
-        await ctx.send(embed=embed, delete_after=7)
+            await emb.delete()
+    except asyncio.TimeoutError:
+        await emb.delete()
 
 
 
@@ -781,6 +720,9 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.NotOwner):
         embed=discord.Embed(title="Special command", description="It is special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
+    elif isinstance(error, QueueLockCheckFailure):
+        embed=discord.Embed(title=error, color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
     else:
         raise error
 
