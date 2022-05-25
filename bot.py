@@ -768,8 +768,8 @@ async def logout(ctx):
 
 @client.command()
 @commands.is_owner()
-async def refetch(ctx):
-    getCookieFile()
+async def refetch(ctx, id_insta=None, id_yt=None):
+    getCookieFile(id_insta, id_yt)
     embed=discord.Embed(title="Default cookies were refetched and refreshed successfully", color=0xfe4b81)
     await ctx.send(embed=embed, delete_after=20)
 
