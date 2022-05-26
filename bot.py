@@ -28,7 +28,7 @@ token = environ["TOKEN"]
 search_engine = environ["SEARCH_ENGINE"]
 search_token = environ["SEARCH_TOKEN"]
 
-client = commands.Bot(command_prefix='-')  # prefix our commands with '-'
+client = commands.Bot(command_prefix='-', help_command=NeodiumHelpCommand())  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
 yt_dl_instance = YTdownload(client)
 in_dl_instance = INSdownload(client)
@@ -209,7 +209,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
     @commands.command(aliases=['s'], help='Searches a query on YT and gives 5 results to choose from. Choosen one will be queued or played')
-    async def search(self, ctx, *, keyw):
+    async def search(self, ctx, *, query):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
         opts = {
@@ -223,7 +223,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
             "cookiefile": "yt_cookies.txt"
         }
 
-        songs = await ydl_async(f'ytsearch5:{keyw}', opts, False)
+        songs = await ydl_async(f'ytsearch5:{query}', opts, False)
 
         videos = songs["entries"]
 
@@ -304,11 +304,11 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
     # command to play sound from a keyword and queue a song if request is made during playing an audio
     @commands.command(aliases=['p'], help='Searches a query on YT and plays or queues the most relevant result')
-    async def play(self, ctx, *, keyw):
+    async def play(self, ctx, *, query):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
         try:
-            info = await ydl_async(f'ytsearch:{keyw}', YDL_OPTIONS, False)
+            info = await ydl_async(f'ytsearch:{query}', YDL_OPTIONS, False)
             info = info['entries'][0]
             url = info['webpage_url']
 
@@ -413,7 +413,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist.')
+    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both.')
     async def addPlaylist(self, ctx, link: str, sp: int = None, ep: int = None):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -495,7 +495,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
     # shows the queued songs of the ctx guild
-    @commands.command(name="queue", help='Displays the current queue')
+    @commands.command(name="queue", help='Displays the current queue. Limit is the number of entries shown per page, default is 10')
     async def listQueue(self, ctx, limit=10):
         out = ""
         pages = []
@@ -585,7 +585,7 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
 
 
     # removes a mentioned song from queue and displays it
-    @commands.command(name="remove", help='Removes an entry from the queue')
+    @commands.command(name="remove", help='Removes an mentioned entry from the queue')
     @checkQueueLock(check_if_bot_connected=True)
     async def removeQueueSong(self, ctx, index: int):
         if (index<=len(queues[ctx.guild.id]) and index>0):
@@ -701,7 +701,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
         self.bot = bot
 
 
-    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. Also if the bot is already playing something then use `-d` or `-download` to download the files\' of that video')
+    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. Also if the bot is already playing something then use `-d` or `-download` to download the files\' of that video. Copt is for choosing vcodec, default is 0 for h264 but can be set to 1 for codec provided by vendor.')
     @commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
     async def dl_yt(self, ctx, url: str = None, copt: int = 0):
         def check_url(url: str):
