@@ -1,6 +1,4 @@
 import discord
-import urllib.request
-import re
 import asyncio
 from os import environ
 from discord.ext import commands
@@ -40,6 +38,15 @@ player = {}
 masters = {}
 queues = {}
 queuelocks = {}
+
+
+def initGuilds():
+    for guild in client.guilds:
+        player[guild.id] = {}
+        queues[guild.id] = []
+        queuelocks[guild.id] = {}
+        queuelocks[guild.id]["lock"] = False
+
 
 
 class QueueLockCheckFailure(commands.CheckFailure):
@@ -144,6 +151,7 @@ async def addsongs(entries, ctx):
 @client.event  
 async def on_ready():
     print('Bot online')
+    initGuilds()
 
 
 class BasicCommands(commands.Cog, name="Basic", description="This category of commands contains the basic functionalities of the bot such as joining a VC."):
@@ -560,6 +568,17 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
 
+    @commands.command(name='current', aliases=['c'], help='Displays information about the current song in the player.')
+    async def currentlyPlaying(self, ctx):
+        if player[ctx.guild.id]:
+            embed=discord.Embed(title="Currently in the Player", description=f'[{player[ctx.guild.id]["title"]}]({player[ctx.guild.id]["url"]})', color=0xfe4b81)
+            embed.set_thumbnail(url=player[ctx.guild.id]["thumbnails"][len(player[ctx.guild.id]["thumbnails"])-1]["url"])
+        else:
+            embed=discord.Embed(title="Nothing currently in the player", color=0xfe4b81)
+        await ctx.send(embed=embed, delete_after=10)
+
+
+
 class QueueCommands(commands.Cog, name="Queue", description="This category of commands contains the commands related to queues. Also there is a concept of queue lock which will dissable any user from using these commands except the user initiating the lock with some more exceptions."):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -800,6 +819,8 @@ async def on_command_error(ctx, error):
     elif isinstance(error, QueueLockCheckFailure):
         embed=discord.Embed(title=error, color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
+    elif isinstance(error, commands.CommandNotFound):
+        print(error)
     else:
         raise error
 
