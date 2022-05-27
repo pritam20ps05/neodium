@@ -701,7 +701,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
         self.bot = bot
 
 
-    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. Also if the bot is already playing something then use `-d` or `-download` to download the files\' of that video. Copt is for choosing vcodec, default is 0 for h264 but can be set to 1 for codec provided by vendor.')
+    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. If the bot is already playing something then passing no input will result in selecting that video. Copt is for choosing vcodec, default is 0 for h264 but can be set to 1 for codec provided by vendor.')
     @commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
     async def dl_yt(self, ctx, url: str = None, copt: int = 0):
         def check_url(url: str):
