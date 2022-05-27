@@ -160,7 +160,7 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
 
 
     # command for bot to join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in
-    @commands.command(help='Makes the bot join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in. Only if you are not trying to disturb someone.')
+    @commands.command(help='Makes the bot join the channel of the user, if the bot has already joined and is in a different channel it will move to the channel the user is in. Only if you are not trying to disturb someone')
     async def join(self, ctx):
         if ctx.message.author.voice:
             channel = ctx.message.author.voice.channel
@@ -184,7 +184,7 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
 
 
     # leaves the vc on demand
-    @commands.command(help='Makes the bot leave the voice channel.')
+    @commands.command(help='Makes the bot leave the voice channel')
     async def leave(self, ctx):
         voice_client = get(self.bot.voice_clients, guild=ctx.guild)
 
@@ -413,8 +413,9 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both.')
-    async def addPlaylist(self, ctx, link: str, sp: int = None, ep: int = None):
+    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both')
+    async def addPlaylist(self, ctx, url: str, sp: int = None, ep: int = None):
+        link = url
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
         # user link formatting
@@ -540,7 +541,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
 
-    @commands.command(help='Displays the lyrics of the current song if available.')
+    @commands.command(help='Displays the lyrics of the current song if available')
     async def lyrics(self, ctx, index=0):
         out = ""
 
@@ -568,7 +569,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
 
 
 
-    @commands.command(name='current', aliases=['c'], help='Displays information about the current song in the player.')
+    @commands.command(name='current', aliases=['c'], help='Displays information about the current song in the player')
     async def currentlyPlaying(self, ctx):
         if player[ctx.guild.id]:
             embed=discord.Embed(title="Currently in the Player", description=f'[{player[ctx.guild.id]["title"]}]({player[ctx.guild.id]["url"]})', color=0xfe4b81)
@@ -701,7 +702,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
         self.bot = bot
 
 
-    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files. If the bot is already playing something then passing no input will result in selecting that video. Copt is for choosing vcodec, default is 0 for h264 but can be set to 1 for codec provided by vendor.')
+    @commands.command(name='download', aliases=['d'], help='Downloads YT or instagram audio video files from the url. If the bot is already playing something then passing no input will result in selecting that video. Copt is for choosing vcodec, default is 0 for h264 but can be set to 1 for codec provided by vendor')
     @commands.max_concurrency(number=1, per=commands.BucketType.default, wait=False)
     async def dl_yt(self, ctx, url: str = None, copt: int = 0):
         def check_url(url: str):
@@ -734,7 +735,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
             await ctx.send(embed=embed, delete_after=15)
 
 
-    @commands.command(help='Supports the instagram private feature. This command Logs in to your account and uses it to access files through your account. Once logged in use the download command normally. This command can only be used in DMs in order to protect your privacy.')
+    @commands.command(help='Supports the instagram private feature. This command Logs in to your inastagram account and uses it to access files through your account. Once logged in use the download command normally. This command can only be used in DMs in order to protect your privacy')
     async def login(self, ctx, usrn=None, passw=None):
         if isinstance(ctx.channel, discord.DMChannel):
             if usrn and passw:
@@ -788,7 +789,7 @@ class SpecialCommands(commands.Cog, name="Special", description="This category o
                     embed=discord.Embed(title=f"{cog_name} cog was added successfully", color=0xfe4b81)
                     await ctx.send(embed=embed, delete_after=20)
 
-    @commands.command(name="remove-cog", help='Removes a already existing cog. Generally used to disable a functionality of the bot.')
+    @commands.command(name="remove-cog", help='Removes a already existing cog. Generally used to disable a functionality of the bot')
     @is_owner()
     async def removeCog(self, ctx, cog_name):
         if cog_name != 'Special':
