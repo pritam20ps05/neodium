@@ -17,7 +17,7 @@ This category of commands contains the basic functionalities of the bot such as 
 ### commands
     -join                                Makes the bot join the channel 
                                          of the user, if the bot has already
-                                         joined and is in a different channel,
+                                         joined and is in a different channel
                                          it will move to the channel the user 
                                          is in. Only if you are not trying to 
                                          disturb someone.
