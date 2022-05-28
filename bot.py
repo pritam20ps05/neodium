@@ -490,7 +490,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-class VisualizerCommands(commands.Cog, name="Visualizer", description="This category of commands contains the visualizers which enables you to monitor some states of the bot or get some kind of info about something"):
+class VisualizerCommands(commands.Cog, name="Visualizer", description="This category of commands contains the visualizers which enables you to monitor some states of the bot or get some kind of info about something."):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -815,7 +815,7 @@ async def on_command_error(ctx, error):
         embed=discord.Embed(title="Please wait..", description="Someone else is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling as the bot is currently running on a free server.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
     elif isinstance(error, commands.NotOwner):
-        embed=discord.Embed(title="Special command", description="It is special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use.", color=0xfe4b81)
+        embed=discord.Embed(title="Access Denied", description=f"It is a special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use. Read more about them from `{ctx.prefix}help Special`.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
     elif isinstance(error, QueueLockCheckFailure):
         embed=discord.Embed(title=error, color=0xfe4b81)
