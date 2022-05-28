@@ -106,11 +106,11 @@ This category of commands contains the special commands which can only be access
 
 ## Installation/Setup
 
-First make sure you have ffmpeg installed install it by
+First make sure you have ffmpeg installed, install it by
 
 for debian:
 ```bash
-apt install ffmpeg
+sudo apt install ffmpeg
 ```
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the requirements.
@@ -133,16 +133,25 @@ INSTA_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR INSTAGRAM>
 YT_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR YT>
 ```
 
-In case deploying it to heroku use the following buildpacks
+In case of deploying it to heroku chekout the [deploy branch](https://github.com/pritam20ps05/neodium/tree/deploy) which will require the following buildpacks and the above mentioned variables.
 ### Buildpacks
     heroku/python
     https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git
     https://github.com/xrisk/heroku-opus.git
     
-## Cautions
-
-1. Never try to make money from this project, not because I will sue you but Youtube can sue you and thats why this project is open-sourced.
-2. Don't get confused between the branches and their code. master is the general stable code base, raw_dev is for me to write code and deploy is for servers or particularly for platform as a service. Also don't use any code outside these branches as they can be outdated. Deploy branch is always recomended.
+## Branch Info
+    master                               The general and the most recent stable 
+                                         version of the bot.
+    
+    raw_dev                              The most updated version of the bot
+                                         and the one with raw development.
+    
+    deploy                               The code that is ready to be deployed
+                                         to a heroku server.
+    
+    proj-info                            A accessory branch which gets the most
+                                         updates regarding documentation and
+                                         license.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
