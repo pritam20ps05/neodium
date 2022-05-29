@@ -10,6 +10,12 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 4. Download Feature: Download any public YT or instagram audio video file. Additional support has also been given for instagram private only.
 
 **NOTE: These are the only the exclusive features that other bots generally don't have. For full usage check usage section**
+    
+## Deploy to Heroku
+
+Click the deploy to heroku button for deploying it now only. Before doing that you would need 5 variable values mentioned in installation/setup section.
+    
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/pritam20ps05/neodium/tree/deploy)
 
 # Usage/Commands
 ## Basic
@@ -133,7 +139,7 @@ INSTA_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR INSTAGRAM>
 YT_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR YT>
 ```
 
-In case of deploying it to heroku chekout the [deploy branch](https://github.com/pritam20ps05/neodium/tree/deploy) which will require the following buildpacks and the above mentioned variables.
+This bot requires the following buildpacks and the above mentioned variables. If you are using the deploy to heroku button to deploy, then you don't need to care about the buidpacks but you will still need the variables.
 ### Buildpacks
     heroku/python
     https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git
