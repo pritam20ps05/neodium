@@ -6,39 +6,111 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
 
 1. No disturb feature: If anyone is serving someone then the bot can't be made to leave the VC.
 2. Advanced No disturb: You can lock the player by using -lock command and anyone will not be able to clear the queue and pause, resume, skip or stop the player except who initiated the lock. In future planning to add a voting system.
-3. Live Feature: The bot can play live youtube videos using -live or -l <youtube live url> 
+3. Live Feature: The bot can play live youtube videos using -live or -l <youtube live url>.  
+4. Download Feature: Download any public YT or instagram audio video file. Additional support has also been given for instagram private only.
 
 **NOTE: These are the only the exclusive features that other bots generally don't have. For full usage check usage section**
 
-## Usage/Commands
+# Usage/Commands
+## Basic
+This category of commands contains the basic functionalities of the bot such as joining a VC.  
+### commands
+    -join                                Makes the bot join the channel 
+                                         of the user, if the bot has already
+                                         joined and is in a different channel
+                                         it will move to the channel the user 
+                                         is in. Only if you are not trying to 
+                                         disturb someone.
+    
+    -leave                               Makes the bot leave the voice channel.
+                                         Only if you are not trying to disturb 
+                                         someone.
+## Player
+This category of commands contains the playable functionalities of the bot. All of them can make bot join vc, play audio and queue audio.
+### commands
+    -search, -s [query]                  Searches the query on YT and gives 5 
+                                         results to choose from. Choosen one
+                                         will be queued or played.
+    
+    -play, -p [query]                    Searches the query on YT and plays or 
+                                         queues the most relevant result.
+    
+    -live, -l [url]                      Plays a YT live from the URL provided 
+                                         as input.
+    
+    -add-playlist [playlist_url]         Adds a whole YT playlist to queue and 
+     [starting_index] [ending_index]     starts playing it. Input is taken as 
+                                         the URL to the public or unlisted playlist.
+                                         You can also mention a starting point or an 
+                                         ending point of the playlist or both.
+## Visualizer
+This category of commands contains the visualizers which enables you to monitor some states of the bot or get some kind of info about something
+### commands
+    -queue [limit=10]                    Displays the current queue. Limit is the 
+                                         number of entries shown per page, default 
+                                         is 10.
+    
+    -lyrics                              Displays the lyrics of the current song if 
+                                         available.
+    
+    -current, -c                         Displays information about the current song 
+                                         in the player.
+## Queue
+This category of commands contains the commands related to queues. Also there is a concept of queue lock which will dissable any user from using these commands except the user initiating the lock with some more exceptions. Queue lock effective commands will be marked with "Q".
+### commands
+    -remove                   Q          Removes an mentioned entry from the queue.
+    
+    -pause                    Q          Pauses the current player.
+    
+    -resume                   Q          Resumes the paused player.
+    
+    -skip                     Q          Skips current audio.
+    
+    -stop                     Q          Just like skip but also clears the queue.
+    
+    -clear-queue, -clear      Q          Clears the queue.
+    
+    -lock                                Locks the queue and prevents anyone from 
+                                         damaging anyone\'s experience.
+## Download
+This category of commands contains recently added download feature which can download YT and instagram audio video files with private support for instagram only.
+### commands
+    -download, -d [url]                  Downloads YT or instagram audio video files  
+    [codec_option=0]                     from the url. If the bot is already playing  
+                                         something then passing no input will result in 
+                                         selecting that video. Codec_option is for 
+                                         choosing vcodec, default is 0 for h264 but can 
+                                         be set to 1 for codec provided by vendor.
+    
+    -login [username]                    Supports the instagram private feature. 
+    [password]                           This command Logs in to your instagram 
+                                         account and uses it to access files through 
+                                         your account. Once logged in use the download 
+                                         command normally. This command can only be 
+                                         used in DMs in order to protect your privacy.
+    
+    -logout                              Logout of your account only if you are already 
+                                         logged in.
+## Special
+This category of commands contains the special commands which can only be accessed by the owner of the bot. These commands enables the owner to remotely invoke methods for temporary fixes or other debugging stuff.
+### commands
+    -refetch [insta_cookie_fileid]       Refetches the default cookie files from the 
+    [yt_cookie_fileid]                   google dive file ids' of the cookie files. 
+                                         If not passed it gets the file ids' from 
+                                         environmental variables.
 
-**-add-playlist** [playlist url] [starting index] [ending index]: To add a playlist to queue  
-**-clear-queue** or **-clear** : Can only be done if there is no lock initiated. Clears the queue.  
-**-help** : Shows help message.  
-**-join** : Makes the bot join a VC.         
-**-leave** : Makes the bot leave the VC.  
-**-live** or **-l** [video url] : Plays the live youtube video.   
-**-lock** : Locks the player and the queue.  
-**-lyrics** : Displays lyrics of the current song.  
-**-pause** : Pauses player.  
-**-play** or **-p** [keyword] : Searches the keyword on youtube and plays the first result.   
-**-queue** [delimeter] : Displays the songs currently in queue.  
-**-remove** [index no] : Removes a mentioned song from queue.       
-**-resume** : Resumes the player.  
-**-search** or **-s** [keyword] : Searches the keyword and displays first 5 results. Choosing one of them will queue the song.    
-**-skip** : Skips the current song.  
-**-stop** : Stops the player from playing anything else.  
-**-download** or **-d** [video url] [codec option]: Downloads the YT video, Instagram video or reel in the url. For codec option 0(default) is v:h264, a:aac. Also leaving it empty will make it try to fetch the content you are currently streaming.  
-**-login** [username] [password]: Logs into your instagram. Enables you to download private content also. NOTE: this command can only be used from DM.  
-**-logout** : Logs out of your already logged in instagram account.
+    -add-cog [cog_name]                  Adds a predefined cog to the bot.
+    
+    -remove-cog [cog_name]               Removes a already existing cog. Generally 
+                                         used to disable a functionality of the bot.
 
 ## Installation/Setup
 
-First make sure you have ffmpeg installed install it by
+First make sure you have ffmpeg installed, install it by
 
 for debian:
 ```bash
-apt install ffmpeg
+sudo apt install ffmpeg
 ```
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the requirements.
@@ -47,38 +119,39 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the req
 pip install -r requirements.txt
 ```
 
-This bot fetches lyrics from [genius.com](https://genius.com) searched using google search api. All this things are done by the lyrics_extractor module which requires SEARCH ENGINE CODE and GOOGLE SEARCH API TOKEN. How to setup lyrics_extractor is given [here](https://www.geeksforgeeks.org/create-a-gui-to-extract-lyrics-from-song-using-python/) you just need the two values and put it in credentials.json.
+This bot fetches lyrics from [genius.com](https://genius.com) searched using google search api. All this things are done by the lyrics_extractor module which requires SEARCH ENGINE CODE and GOOGLE SEARCH API TOKEN. How to setup lyrics_extractor is given [here](https://www.geeksforgeeks.org/create-a-gui-to-extract-lyrics-from-song-using-python/) you just need the two values.
 
-Now time for credentials if you are using the code from master branch or raw_dev then create a credentials.jsob file.
-
-### credentials.json
-```json
-{
-    "token": "BOT TOKEN",
-    "search_engine": "SEARCH ENGINE CODE",
-    "search_token": "GOOGLE SEARCH API TOKEN"
-}
-```
-But if you using the code from deploy then there is no credentials.json file it takes them from the environment. Now setting them up.
+Now get the [bot token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token), after that create 2 cookie files one for youtube and the other for instagram using [cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt/bgaddhkoddajcdgocldbbfleckgcbcid?hl=en) chrome extension. Once done upload them to google drive, make it public and copy their file ids'.
+    
+The following are all the environmental variables required for starting the bot.
 
 ```bash
-export TOKEN=<BOT TOKEN>
-export SEARCH_ENGINE=<SEARCH ENGINE CODE>
-export SEARCH_TOKEN=<GOOGLE SEARCH API TOKEN>
+TOKEN <BOT TOKEN>
+SEARCH_ENGINE <SEARCH ENGINE CODE>
+SEARCH_TOKEN <GOOGLE SEARCH API TOKEN>
+INSTA_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR INSTAGRAM>
+YT_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR YT>
 ```
 
-The deploy branch requires an extra file named cookies.txt its just to remove age restriction. So to make it log into your not age restricted google account in your browser and then export cookies.txt file of that account using the cookies.txt extension. See more about it in setup of youtube-dl.
-
-Now running it is pretty easy as you can make a service, a background task etc. but the very general way is 
-
-```bash
-python bot.py
-```
-
-## Cautions
-
-1. Never try to make money from this project, not because I will sue you but Youtube can sue you and thats why this project is open-sourced.
-2. Don't get confused between the branches and their code. master is the general stable code base, raw_dev is for me to write code and deploy is for servers or particularly for platform as a service. Also don't use any code outside these branches as they can be outdated. Deploy branch is always recomended.
+In case of deploying it to heroku chekout the [deploy branch](https://github.com/pritam20ps05/neodium/tree/deploy) which will require the following buildpacks and the above mentioned variables.
+### Buildpacks
+    heroku/python
+    https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git
+    https://github.com/xrisk/heroku-opus.git
+    
+## Branch Info
+    master                               The general and the most recent stable 
+                                         version of the bot.
+    
+    raw_dev                              The most updated version of the bot
+                                         and the one with raw development.
+    
+    deploy                               The code that is ready to be deployed
+                                         to a heroku server.
+    
+    proj-info                            A accessory branch which gets the most
+                                         updates regarding documentation and
+                                         license.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
