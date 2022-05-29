@@ -21,7 +21,6 @@ from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from NeodiumUtils import *
-from json import load
 
 YDL_OPTIONS = {
     'format': 'bestaudio', 
@@ -41,7 +40,8 @@ token = environ["TOKEN"]
 search_engine = environ["SEARCH_ENGINE"]
 search_token = environ["SEARCH_TOKEN"]
 
-client = commands.Bot(command_prefix='-', help_command=NeodiumHelpCommand())  # prefix our commands with '-'
+activity = discord.Activity(type=discord.ActivityType.listening, name="-help")
+client = commands.Bot(command_prefix='-', activity=activity, help_command=NeodiumHelpCommand())  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
 yt_dl_instance = YTdownload(client)
 in_dl_instance = INSdownload(client)
@@ -68,8 +68,6 @@ class QueueLockCheckFailure(commands.CheckFailure):
 
 def checkQueueLock(hard=False, check_if_bot_connected=False):
     async def predicate(ctx):
-        if ctx.invoked_with == 'help':
-            return True
         voice = get(client.voice_clients, guild=ctx.guild)
         if voice or not check_if_bot_connected:
             if ctx.guild.id in queuelocks.keys() and queuelocks[ctx.guild.id]["lock"] and queuelocks[ctx.guild.id]["author"].voice and queuelocks[ctx.guild.id]["author"].voice.channel == voice.channel and not (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []): 
@@ -85,24 +83,6 @@ def checkQueueLock(hard=False, check_if_bot_connected=False):
             raise QueueLockCheckFailure("I am currently not connected to any voice channel")
     return commands.check(predicate)
 
-def is_owner():
-    """A :func:`.check` that checks if the person invoking this command is the
-    owner of the bot.
-
-    This is powered by :meth:`.Bot.is_owner`.
-
-    This check raises a special exception, :exc:`.NotOwner` that is derived
-    from :exc:`.CheckFailure`. But returns allways true when invoked through help
-    """
-
-    async def predicate(ctx):
-        if ctx.invoked_with == 'help':
-            return True
-        if not await ctx.bot.is_owner(ctx.author):
-            raise commands.NotOwner('You do not own this bot.')
-        return True
-
-    return commands.check(predicate)
 
 # main queue manager function to play music in queues
 async def check_queue(id, voice, ctx, msg=None):
@@ -784,16 +764,19 @@ class SpecialCommands(commands.Cog, name="Special", description="This category o
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def cog_check(self, ctx):
+        if not await ctx.bot.is_owner(ctx.author):
+            raise commands.NotOwner('You do not own this bot.')
+        return True
+
 
     @commands.command(help='Refetches the default cookie files')
-    @is_owner()
     async def refetch(self, ctx, id_insta=None, id_yt=None):
         getCookieFile(id_insta, id_yt)
         embed=discord.Embed(title="Default cookies were refetched and refreshed successfully", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
 
     @commands.command(name="add-cog", help='Adds a predefined cog to the bot')
-    @is_owner()
     async def addCog(self, ctx, cog_name):
         if cog_name != 'Special':
             for cog in cog_list:
@@ -803,7 +786,6 @@ class SpecialCommands(commands.Cog, name="Special", description="This category o
                     await ctx.send(embed=embed, delete_after=20)
 
     @commands.command(name="remove-cog", help='Removes a already existing cog. Generally used to disable a functionality of the bot')
-    @is_owner()
     async def removeCog(self, ctx, cog_name):
         if cog_name != 'Special':
             self.bot.remove_cog(cog_name)
@@ -829,11 +811,13 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=embed, delete_after=20)
     elif isinstance(error, commands.NotOwner):
         embed=discord.Embed(title="Access Denied", description=f"It is a special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use. Read more about them from `{ctx.prefix}help Special`.", color=0xfe4b81)
-        await ctx.send(embed=embed, delete_after=20)
+        await ctx.reply(embed=embed, delete_after=20)
     elif isinstance(error, QueueLockCheckFailure):
         embed=discord.Embed(title=error, color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=10)
     elif isinstance(error, commands.CommandNotFound):
+        print(error)
+    elif isinstance(error, commands.errors.MissingRequiredArgument):
         print(error)
     else:
         raise error

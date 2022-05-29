@@ -19,6 +19,7 @@ from discord import SelectMenu, SelectOption
 class NeodiumHelpCommand(commands.HelpCommand):
     def __init__(self):
         super().__init__()
+        self.verify_checks = False
 
     async def send_bot_help(self, mapping):
         cog_embeds = {}
