@@ -34,7 +34,8 @@ class NeodiumHelpCommand(commands.HelpCommand):
                     command_names.append(command.name)
                     alias = ''
                     if command.aliases != []:
-                        alias = f', {self.context.prefix}{command.aliases[0]}'
+                        a = f', {self.context.prefix}'.join(command.aliases)
+                        alias = f', {self.context.prefix}{a}'
                     cog_embeds[cog.qualified_name].add_field(name=f'{self.context.prefix}{command.name}{alias}', value=command.help)
                 cog_embeds[cog.qualified_name].set_footer(text=f'Use {self.context.prefix}help {cog.qualified_name} or {self.context.prefix}help <cmd> to see more details')
                 options.append(SelectOption(label=cog.qualified_name, value=cog.qualified_name, description=', '.join(command_names[:4])))
@@ -81,7 +82,8 @@ class NeodiumHelpCommand(commands.HelpCommand):
         for command in commands:
             alias = ''
             if command.aliases != []:
-                alias = f', {self.context.prefix}{command.aliases[0]}'
+                a = f', {self.context.prefix}'.join(command.aliases)
+                alias = f', {self.context.prefix}{a}'
             embed.add_field(name=f'{self.context.prefix}{command.name}{alias}', value=command.help)
             command_embeds[command.name] = discord.Embed(title=f'{self.context.prefix}{command.name}{alias} {command.signature}', description=command.help, color=0xfe4b81)
             command_embeds[command.name].set_footer(text=f'Use {self.context.prefix}help {command.name} to see only this message')
@@ -123,7 +125,8 @@ class NeodiumHelpCommand(commands.HelpCommand):
     async def send_command_help(self, command):
         alias = ''
         if command.aliases != []:
-            alias = f', {self.context.prefix}{command.aliases[0]}'
+            a = f', {self.context.prefix}'.join(command.aliases)
+            alias = f', {self.context.prefix}{a}'
         embed = discord.Embed(title=f'{self.context.prefix}{command.name}{alias} {command.signature}', description=command.help, color=0xfe4b81)
         embed.set_footer(text='Built on neodium core v1.2 by pritam20ps05', icon_url='https://user-images.githubusercontent.com/49360491/170466737-afafd7aa-f067-4503-9a1d-7d74de1b474b.png')
         await self.get_destination().send(embed=embed)
