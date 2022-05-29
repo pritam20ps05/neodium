@@ -1,0 +1,33 @@
+{
+    "name": "neodium bot template",
+    "description": "A discord music bot with modern advance features initiallly buit to replace groovy.",
+    "repository": "https://github.com/pritam20ps05/neodium",
+    "env": {
+        "TOKEN": {
+            "description": "YOUR BOT TOKEN"
+        },
+        "SEARCH_ENGINE": {
+            "description": "YOUR SEARCH ENGINE CODE"
+        },
+        "SEARCH_TOKEN": {
+            "description": "YOUR GOOGLE SEARCH API TOKEN"
+        },
+        "INSTA_COOKIEFILE_ID": {
+            "description": "YOUR COOKIEFILE GDRIVE FILE ID FOR INSTAGRAM"
+        },
+        "YT_COOKIEFILE_ID": {
+            "description": "YOUR COOKIEFILE GDRIVE FILE ID FOR YT"
+        }
+    },
+    "buildpacks": [
+        {
+          "url": "heroku/python"
+        },
+        {
+          "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+        },
+        {
+          "url": "https://github.com/xrisk/heroku-opus.git"
+        }
+    ]
+}
