@@ -141,6 +141,7 @@ class Downloader():
 
         with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
             ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
+            ytops['restrictfilenames'] = True
             with YoutubeDL(ytops) as ydl:
                 info = await ydl_async(url, ytops, True)
                 filepath = ydl.prepare_filename(info)
