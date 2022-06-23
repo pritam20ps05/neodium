@@ -811,6 +811,8 @@ async def on_command_error(ctx, error):
         print(error)
     elif isinstance(error, commands.errors.MissingRequiredArgument):
         print(error)
+    elif isinstance(error, asyncio.TimeoutError):
+        print(error)
     else:
         raise error
 

@@ -103,22 +103,26 @@ class Downloader():
             options.append(SelectOption(emoji='🎥', label=res, value=res, description='.mp4'))
 
         embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
-        emb = await ctx.send(embed=embed, components=[
-            [
-                SelectMenu(
-                    custom_id='_select_it',
-                    options=options,
-                    placeholder='Select a format',
-                    max_values=1,
-                    min_values=1 
-                )
-            ]
-        ])
+        select_menu_context = SelectMenu(
+            custom_id='_select_it',
+            options=options,
+            placeholder='Select a format',
+            max_values=1,
+            min_values=1 
+        )
+        emb = await ctx.send(embed=embed, components=[[select_menu_context]])
 
         def check_selection(i: discord.Interaction, select_menu):
             return i.author == ctx.author and i.message == emb
 
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        async def disable_menu(ctx):
+            select_menu_context.disabled = True
+            await ctx.edit(embed=embed, components=[[select_menu_context]])
+
+        try:
+            interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        finally:
+            await disable_menu(emb)
         if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
@@ -214,22 +218,26 @@ class INSdownload(Downloader):
         options.append(SelectOption(emoji='🎥', label='Audio and Video', value='2', description='.mp4'))
 
         embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
-        emb = await ctx.send(embed=embed, components=[
-            [
-                SelectMenu(
-                    custom_id='_select_it',
-                    options=options,
-                    placeholder='Select a format',
-                    max_values=1,
-                    min_values=1 
-                )
-            ]
-        ])
+        select_menu_context = SelectMenu(
+            custom_id='_select_it',
+            options=options,
+            placeholder='Select a format',
+            max_values=1,
+            min_values=1 
+        )
+        emb = await ctx.send(embed=embed, components=[[select_menu_context]])
 
         def check_selection(i: discord.Interaction, select_menu):
             return i.author == ctx.author and i.message == emb
 
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        async def disable_menu(ctx):
+            select_menu_context.disabled = True
+            await ctx.edit(embed=embed, components=[[select_menu_context]])
+
+        try:
+            interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        finally:
+            await disable_menu(emb)
         if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
