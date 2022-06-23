@@ -106,7 +106,6 @@ async def check_queue(id, voice, ctx, msg=None):
             while not(voice.is_playing() or voice.is_paused()):
                 info = await ydl_async(player[id]["url"], YDL_OPTIONS, False)
                 player[id]["link"] = info['url']
-                player[id]["raw"] = info
                 voice.play(FFmpegPCMAudio(player[id]["link"], **FFMPEG_OPTIONS))
                 await asyncio.sleep(1)
     
@@ -128,8 +127,7 @@ async def addsongs(entries, ctx):
                 "link": info['url'],
                 "url": url,
                 "title": info['title'],
-                "thumbnails": info["thumbnails"],
-                "raw": info
+                "thumbnails": info["thumbnails"]
             }
             queues[ctx.guild.id].append(data)
         except Exception as e:
@@ -248,8 +246,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": info['webpage_url'],
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     await check_queue(ctx.guild.id, voice, ctx)
@@ -259,8 +256,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": info['webpage_url'],
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({data["url"]})', color=0xfe4b81)
@@ -277,8 +273,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": info['webpage_url'],
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     await check_queue(ctx.guild.id, voice, ctx)
@@ -314,8 +309,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": url,
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     await check_queue(ctx.guild.id, voice, ctx)
@@ -325,8 +319,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": url,
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     embed=discord.Embed(title="Item queued", description=f'[{info["title"]}]({url})', color=0xfe4b81)
@@ -343,8 +336,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                         "link": info['url'],
                         "url": url,
                         "title": info['title'],
-                        "thumbnails": info["thumbnails"],
-                        "raw": info
+                        "thumbnails": info["thumbnails"]
                     }
                     queues[ctx.guild.id].append(data)
                     await check_queue(ctx.guild.id, voice, ctx)
