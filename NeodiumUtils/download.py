@@ -51,15 +51,18 @@ async def ydl_async(url, ytops, d):
         result = await loop.run_in_executor(pool, y_dl, url, ytops, d)
     return result
 
-class FileBin():
+class GoFile():
     async def upload(filepath: str, filename: str):
-        api = 'https://filebin.net/'
-        bin = ''.join(random.choice(ascii_letters) for _ in range(18))
+        api = 'https://store1.gofile.io'
         async with aiohttp.ClientSession() as session:
+            formdata = aiohttp.FormData()
             with open(filepath, 'rb') as f:
-                async with session.post(f'{api}{bin}/{filename}', data=f) as resp:
+                formdata.add_field('file', f, filename=filename)
+                async with session.post(f'{api}/uploadFile', data=formdata) as resp:
                     r = await resp.json()
-        dl_url = api+r['bin']['id']+'/'+r['file']['filename']
+        fileid = r['data']['fileId']
+        filename = r['data']['fileName']
+        dl_url = f'{api}/download/{fileid}/{filename}'
         return dl_url
 
 class Downloader():
@@ -159,8 +162,8 @@ class Downloader():
             except Exception as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=20)
-                dl_url = await FileBin.upload(filepath, filename)
-                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
+                dl_url = await GoFile.upload(filepath, filename)
+                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [Gofile.io](https://gofile.io/)**', color=0xfe4b81)
                 if usrcreds:
                     await ctx.author.send(embed=embed)
                     await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
