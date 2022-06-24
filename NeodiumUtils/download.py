@@ -51,19 +51,35 @@ async def ydl_async(url, ytops, d):
         result = await loop.run_in_executor(pool, y_dl, url, ytops, d)
     return result
 
+class GoFileError(Exception):
+    def __init__(self, msg, resp) -> None:
+        self.status = resp.get('status')
+        self.data = resp.get('data')
+        self.payload = resp
+        super().__init__(f'{msg}. api responded with status {self.status}.')
+
 class GoFile():
+    async def getServer():
+        api = 'https://api.gofile.io/getServer'
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api) as resp:
+                r = await resp.json()
+        if r.get('status') == 'ok':
+            return r['data'].get('server')
+        raise GoFileError('[get_server] can\'t fetch servername', r)
+
     async def upload(filepath: str, filename: str):
-        api = 'https://store1.gofile.io'
+        server = await GoFile.getServer()
+        api = f'https://{server}.gofile.io'
         async with aiohttp.ClientSession() as session:
             formdata = aiohttp.FormData()
             with open(filepath, 'rb') as f:
                 formdata.add_field('file', f, filename=filename)
                 async with session.post(f'{api}/uploadFile', data=formdata) as resp:
                     r = await resp.json()
-        fileid = r['data']['fileId']
-        filename = r['data']['fileName']
-        dl_url = f'{api}/download/{fileid}/{filename}'
-        return dl_url
+        if r.get('status') == 'ok':
+            return r['data'].get('downloadPage')
+        raise GoFileError('[upload] can\'t upload file', r)
 
 class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
