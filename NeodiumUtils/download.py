@@ -91,6 +91,48 @@ class Downloader():
         }
         self.vcodecs = ['h264', 'copy']
 
+    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int, usrcreds=None):
+        ytops = self.dl_ops.copy()
+        if usrcreds:
+            ytops.update(usrcreds)
+        ytops['format'] = format
+        ytops['merge_output_format'] = ext
+        InstagramBaseIE._IS_LOGGED_IN = False
+
+        with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
+            ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
+            with YoutubeDL(ytops) as ydl:
+                info = await ydl_async(url, ytops, True)
+                filepath = ydl.prepare_filename(info)
+                filepath = await ffmpegPostProcessor(filepath, self.vcodecs[copt], 'aac', ext)
+                filename = filepath.split('/')[-1]
+
+            try:
+                embed=discord.Embed(title='Your file is ready to download', description=f'File requested by {ctx.author.mention}', color=0xfe4b81)
+                if usrcreds:
+                    await ctx.author.send(embed=embed, file=discord.File(filepath))
+                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                else:
+                    await ctx.send(embed=embed, file=discord.File(filepath))
+                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+            except Exception as e:
+                embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=20)
+                dl_url = await GoFile.upload(filepath, filename)
+                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [Gofile.io](https://gofile.io/)**', color=0xfe4b81)
+                if usrcreds:
+                    await ctx.author.send(embed=embed)
+                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                else:
+                    await ctx.send(embed=embed)
+                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                raise e
+        
+class YTdownload(Downloader):
+    def __init__(self, client: discord.Client):
+        cookie_file = 'yt_cookies.txt'
+        super().__init__(client, cookie_file)
+
     async def getUrlInfo(self, url: str):
         video_resolutions = []
         try:
@@ -104,7 +146,7 @@ class Downloader():
 
         return info, video_resolutions
 
-    async def getUserChoice(self, ctx: commands.Context, url: str, copt: int):
+    async def downloadVideo(self, ctx, url, copt):
         try:
             info, video_resolutions = await self.getUrlInfo(url)
         except utils.DownloadError as e:
@@ -154,51 +196,6 @@ class Downloader():
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
             await self.downloadAndSendFile(ctx, video_page, format, ext, copt)
-
-    async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int, usrcreds=None):
-        ytops = self.dl_ops.copy()
-        if usrcreds:
-            ytops.update(usrcreds)
-        ytops['format'] = format
-        ytops['merge_output_format'] = ext
-        InstagramBaseIE._IS_LOGGED_IN = False
-
-        with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
-            ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
-            with YoutubeDL(ytops) as ydl:
-                info = await ydl_async(url, ytops, True)
-                filepath = ydl.prepare_filename(info)
-                filepath = await ffmpegPostProcessor(filepath, self.vcodecs[copt], 'aac', ext)
-                filename = filepath.split('/')[-1]
-
-            try:
-                embed=discord.Embed(title='Your file is ready to download', description=f'File requested by {ctx.author.mention}', color=0xfe4b81)
-                if usrcreds:
-                    await ctx.author.send(embed=embed, file=discord.File(filepath))
-                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
-                else:
-                    await ctx.send(embed=embed, file=discord.File(filepath))
-                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
-            except Exception as e:
-                embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=20)
-                dl_url = await GoFile.upload(filepath, filename)
-                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [Gofile.io](https://gofile.io/)**', color=0xfe4b81)
-                if usrcreds:
-                    await ctx.author.send(embed=embed)
-                    await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
-                else:
-                    await ctx.send(embed=embed)
-                    await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
-                raise e
-        
-class YTdownload(Downloader):
-    def __init__(self, client: discord.Client):
-        cookie_file = 'yt_cookies.txt'
-        super().__init__(client, cookie_file)
-
-    async def downloadVideo(self, ctx, url, copt):
-        await self.getUserChoice(ctx, url, copt)
 
 class INSdownload(Downloader):
     def __init__(self, client: discord.Client):
