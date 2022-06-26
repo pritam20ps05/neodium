@@ -70,6 +70,8 @@ This category of commands contains the commands related to queues. Also there is
     
     -clear-queue, -clear      Q          Clears the queue.
     
+    -shuffle                  Q          Randomly shuffles the whole queue.
+    
     -lock                                Locks the queue and prevents anyone from 
                                          damaging anyone\'s experience.
 ## Download
