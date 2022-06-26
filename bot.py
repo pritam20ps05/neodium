@@ -360,52 +360,55 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
         }
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
-        if url:
-            info = await ydl_async(url, opts, False)
-            if voice:
-                if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
-                    masters[ctx.guild.id] = ctx.message.author
-                if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-                    voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
+        info = await ydl_async(url, opts, False)
+        if not info.get('is_live'):
+            embed=discord.Embed(title="The link is not of a live video", color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=10)
+            return
 
-                    embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
-                    embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+        if voice:
+            if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
+                masters[ctx.guild.id] = ctx.message.author
+            if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
+                voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
 
-                    msg = await ctx.send(embed=embed)
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
 
-                    await check_queue(ctx.guild.id, voice, ctx, msg)
-                else:
-                    embed=discord.Embed(title="Lives can't be queued", color=0xfe4b81)
-                    await ctx.send(embed=embed, delete_after=10)
+                msg = await ctx.send(embed=embed)
+
+                await check_queue(ctx.guild.id, voice, ctx, msg)
             else:
-                if ctx.message.author.voice:
-                    channel = ctx.message.author.voice.channel
-                    voice = await channel.connect()
-                    masters[ctx.guild.id] = ctx.message.author
-                    queues[ctx.guild.id] = []
-                    player[ctx.guild.id] = {}
-                    voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
+                embed=discord.Embed(title="Lives can't be queued", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
+        else:
+            if ctx.message.author.voice:
+                channel = ctx.message.author.voice.channel
+                voice = await channel.connect()
+                masters[ctx.guild.id] = ctx.message.author
+                queues[ctx.guild.id] = []
+                player[ctx.guild.id] = {}
+                voice.play(FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS))
 
-                    embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
-                    embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
+                embed=discord.Embed(title="Currently Playing (LIVE)", description=f'[{info["title"]}]({info["webpage_url"]})', color=0xfe4b81)
+                embed.set_thumbnail(url=info["thumbnails"][len(info["thumbnails"])-1]["url"])
 
-                    msg = await ctx.send(embed=embed)
+                msg = await ctx.send(embed=embed)
 
-                    await check_queue(ctx.guild.id, voice, ctx, msg)
-                else:
-                    embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
-                    await ctx.send(embed=embed, delete_after=10) 
+                await check_queue(ctx.guild.id, voice, ctx, msg)
+            else:
+                embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10) 
 
 
 
     @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both')
     async def addPlaylist(self, ctx, url: str, sp: int = None, ep: int = None):
-        link = url
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
         # user link formatting
-        if "list=" in link:
-            id_frt = link.split("list=")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
+        if "list=" in url:
+            id_frt = url.split("list=")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
             link = "https://www.youtube.com/playlist?list=" + id_frt
         else:
             # promt with invalid link
