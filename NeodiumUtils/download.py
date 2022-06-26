@@ -194,6 +194,10 @@ class YTdownload(Downloader):
 
         try:
             interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        except asyncio.TimeoutError:
+            print('timeout on selection_select')
+            await disable_menu(emb)
+            return
         finally:
             await disable_menu(emb)
         if str(select_menu.values[0]) == '1':
@@ -260,6 +264,10 @@ class INSdownload(Downloader):
 
         try:
             interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        except asyncio.TimeoutError:
+            print('timeout on selection_select')
+            await disable_menu(emb)
+            return
         finally:
             await disable_menu(emb)
         if str(select_menu.values[0]) == '1':
