@@ -11,6 +11,7 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 """
-from .download import Downloader, YTdownload, INSdownload, private_login, ydl_async
+from .download import Downloader, YTdownload, INSdownload, private_login, ydl_async, YDL_OPTIONS
 from .prefetch import getCookieFile
 from .helpcommand import NeodiumHelpCommand
+from .spotify import SpotifyClient

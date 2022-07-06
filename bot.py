@@ -13,6 +13,7 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
 """
 import discord
 import asyncio
+import re
 from os import environ
 from discord.ext import commands
 from discord.utils import get
@@ -21,13 +22,6 @@ from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from NeodiumUtils import *
-
-YDL_OPTIONS = {
-    'format': 'bestaudio', 
-    'noplaylist': 'True', 
-    'source_address': '0.0.0.0',
-    "cookiefile": "yt_cookies.txt"
-    }
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
@@ -43,6 +37,7 @@ search_token = environ["SEARCH_TOKEN"]
 activity = discord.Activity(type=discord.ActivityType.listening, name="-help")
 client = commands.Bot(command_prefix='-', activity=activity, help_command=NeodiumHelpCommand())  # prefix our commands with '-'
 lyrics_api = SongLyrics(search_token, search_engine)
+spotify_api = SpotifyClient()
 yt_dl_instance = YTdownload(client)
 in_dl_instance = INSdownload(client)
 private_instance = private_login('login.json')
@@ -406,48 +401,61 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
     async def addPlaylist(self, ctx, url: str, sp: int = None, ep: int = None):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
-        # user link formatting
-        if "list=" in url:
-            id_frt = url.split("list=")[1] # list=PL9bw4S5ePsEEqCMJSiYZ-KTtEjzVy0YvK
-            link = "https://www.youtube.com/playlist?list=" + id_frt
-        else:
-            # promt with invalid link
+        source = None
+        if 'youtube' in url or 'youtu.be' in url:
+            p_id = re.search(r'^.*?(?:list)=(.*?)(?:&|$)', url).groups()
+            if p_id:
+                link = "https://www.youtube.com/playlist?list=" + p_id[0]
+                source = 'youtube'
+        elif 'spotify' in url:
+            source = 'spotify'
+            spotify_tracks = await spotify_api.getPlaylist(url, ctx, sp, ep)
+            
+        if not source:
             embed=discord.Embed(title="Invalid link", color=0xfe4b81)
             await ctx.send(embed=embed)
             return
 
         try:
-            opts = {
-                "extract_flat": True,
-                "source_address": "0.0.0.0",
-                "cookiefile": "yt_cookies.txt"
-            }
-            info = await ydl_async(link, opts, False)
-                
-            # Entry slicing
-            info["entries"] = info["entries"][sp:ep]
+            if source == 'youtube':
+                opts = {
+                    "extract_flat": True,
+                    "source_address": "0.0.0.0",
+                    "cookiefile": "yt_cookies.txt"
+                }
+                info = await ydl_async(link, opts, False)
+                info["entries"] = info["entries"][sp:ep]
 
-            if sp or ep:
-                if ep:
-                    embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {ep}**', color=0xfe4b81)
+                if sp or ep:
+                    if ep:
+                        embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {ep}**', color=0xfe4b81)
+                    else:
+                        embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {len(info["entries"])+sp}**', color=0xfe4b81)
                 else:
-                    embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {len(info["entries"])+sp}**', color=0xfe4b81)
-            else:
-                embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
+                    embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})', color=0xfe4b81)
 
             if voice:
                 if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
                     masters[ctx.guild.id] = ctx.message.author
                 # check if the bot is already playing
                 if not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []:
-                    await ctx.send(embed=embed)
-                    coros = []
-                    coros.append(addsongs(info["entries"], ctx))
-                    coros.append(check_queue(ctx.guild.id, voice, ctx))
-                    asyncio.gather(*coros)
+                    if source == 'youtube':
+                        await ctx.send(embed=embed)
+                        coros = []
+                        coros.append(addsongs(info["entries"], ctx))
+                        coros.append(check_queue(ctx.guild.id, voice, ctx))
+                        asyncio.gather(*coros)
+                    elif source == 'spotify':
+                        coros = []
+                        coros.append(spotify_api.addSongs(spotify_tracks, queues[ctx.guild.id], ctx))
+                        coros.append(check_queue(ctx.guild.id, voice, ctx))
+                        asyncio.gather(*coros)
                 else:
-                    await ctx.send(embed=embed)
-                    await addsongs(info["entries"], ctx)
+                    if source == 'youtube':
+                        await ctx.send(embed=embed)
+                        await addsongs(info["entries"], ctx)
+                    elif source == 'spotify':
+                        await spotify_api.addSongs(spotify_tracks, queues[ctx.guild.id], ctx)
             else: 
                 if ctx.message.author.voice:
                     channel = ctx.message.author.voice.channel
@@ -455,11 +463,17 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                     masters[ctx.guild.id] = ctx.message.author
                     queues[ctx.guild.id] = []
                     player[ctx.guild.id] = {}
-                    await ctx.send(embed=embed)
-                    coros = []
-                    coros.append(addsongs(info["entries"], ctx))
-                    coros.append(check_queue(ctx.guild.id, voice, ctx))
-                    asyncio.gather(*coros)
+                    if source == 'youtube':
+                        await ctx.send(embed=embed)
+                        coros = []
+                        coros.append(addsongs(info["entries"], ctx))
+                        coros.append(check_queue(ctx.guild.id, voice, ctx))
+                        asyncio.gather(*coros)
+                    elif source == 'spotify':
+                        coros = []
+                        coros.append(spotify_api.addSongs(spotify_tracks, queues[ctx.guild.id], ctx))
+                        coros.append(check_queue(ctx.guild.id, voice, ctx))
+                        asyncio.gather(*coros)
                 else:
                     embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
                     await ctx.send(embed=embed, delete_after=10)

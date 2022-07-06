@@ -26,6 +26,12 @@ from discord import SelectMenu, SelectOption
 from yt_dlp import YoutubeDL, utils
 from yt_dlp.extractor.instagram import InstagramBaseIE
 
+YDL_OPTIONS = {
+    'format': 'bestaudio', 
+    'noplaylist': 'True', 
+    'source_address': '0.0.0.0',
+    "cookiefile": "yt_cookies.txt"
+}
 
 async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfilename = inputfile.split('/')[-1]
