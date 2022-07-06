@@ -25,7 +25,8 @@ class SpotifyClient():
             track = track.track
             if track.track:
                 with YoutubeDL(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(f'ytsearch:{track.artists[0].name} {track.name} lyrics', download=False)
+                    query = f'{track.artists[0].name} - {track.name} Lyrics'.replace(":", "").replace("\"", "")
+                    info = ydl.extract_info(f'ytsearch:{query}', download=False)
                 info = info['entries'][0]
                 queue.append({
                     "link": info['url'],
@@ -35,7 +36,7 @@ class SpotifyClient():
                 })
             await asyncio.sleep(2)
         embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10)
 
     async def getPlaylist(self, playlist_url: str, ctx: commands.Context, sp: int, ep: int):
         playlist_info = await spotify.playlist(self.getID(playlist_url, 'playlist'))

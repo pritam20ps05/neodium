@@ -15,6 +15,7 @@ import discord
 import asyncio
 import re
 from os import environ
+from random import shuffle
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
@@ -129,7 +130,7 @@ async def addsongs(entries, ctx):
             print(e)
         await asyncio.sleep(2)
     embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, delete_after=10)
 
 
 
@@ -663,7 +664,32 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
                 queues[ctx.guild.id] = []
                 await emb.delete()
                 embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
-                await ctx.send(embed=embed)
+                await ctx.send(embed=embed, delete_after=10)
+            else:
+                await emb.delete()
+        except asyncio.TimeoutError:
+            await emb.delete()
+
+
+    @commands.command(name="shuffle", help='Shuffles the whole queue')
+    @checkQueueLock(check_if_bot_connected=True)
+    async def shuffleQueue(self, ctx):
+        options = ["👍", "🚫"]
+        embed=discord.Embed(title="Do you really want to shuffle the queue", color=0xfe4b81)
+        emb = await ctx.send(embed=embed)
+        try:
+            for option in options:
+                await emb.add_reaction(option)
+            
+            def chk(reaction, user):
+                return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
+            
+            react, user = await self.bot.wait_for('reaction_add', check=chk, timeout=30.0)
+            if react.emoji == "👍":
+                shuffle(queues[ctx.guild.id])
+                await emb.delete()
+                embed=discord.Embed(title="The queue has been shuffled", color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=10)
             else:
                 await emb.delete()
         except asyncio.TimeoutError:
