@@ -130,7 +130,7 @@ async def addsongs(entries, ctx):
             print(e)
         await asyncio.sleep(2)
     embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
-    await ctx.send(embed=embed, delete_after=10)
+    await ctx.send(embed=embed)
 
 
 
