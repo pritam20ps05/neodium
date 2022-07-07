@@ -113,11 +113,14 @@ async def check_queue(id, voice, ctx, msg=None):
 
 # a asyncronus function to get video details because normally some timeout issue occurs but this is slower
 async def addsongs(entries, ctx):
-    for song in entries:
+    for i, song in enumerate(entries):
         url = song["url"]
         try:
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(url, download=False)
+            if i == 0:
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(url, download=False)
+            else:
+                info = await ydl_async(url, YDL_OPTIONS, False)
             
             data = {
                 "link": info['url'],
@@ -128,7 +131,6 @@ async def addsongs(entries, ctx):
             queues[ctx.guild.id].append(data)
         except Exception as e:
             print(e)
-        await asyncio.sleep(2)
     embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
     await ctx.send(embed=embed)
 
@@ -398,7 +400,7 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    @commands.command(name="add-playlist", help='Adds a whole YT playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both')
+    @commands.command(name="add-playlist", help='Adds a whole YT or Spotify playlist to queue and starts playing it. Input is taken as the URL to the public or unlisted playlist. You can also mention a starting point or an ending point of the playlist or both')
     async def addPlaylist(self, ctx, url: str, sp: int = None, ep: int = None):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
