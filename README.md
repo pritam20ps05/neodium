@@ -38,8 +38,8 @@ This category of commands contains the playable functionalities of the bot. All 
     -live, -l [url]                      Plays a YT live from the URL provided 
                                          as input.
     
-    -add-playlist [playlist_url]         Adds a whole YT playlist to queue and 
-     [starting_index] [ending_index]     starts playing it. Input is taken as 
+    -add-playlist [playlist_url]         Adds a whole YT or Spotify playlist to queue 
+     [starting_index] [ending_index]     and starts playing it. Input is taken as 
                                          the URL to the public or unlisted playlist.
                                          You can also mention a starting point or an 
                                          ending point of the playlist or both.
