@@ -14,26 +14,15 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
 import discord
 import asyncio
 import re
-from os import environ
 from random import shuffle
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio
-from DiscordUtils.Pagination import CustomEmbedPaginator as EmbedPaginator
 from yt_dlp import YoutubeDL, utils
 from lyrics_extractor import SongLyrics, LyricScraperException
 from NeodiumUtils import *
 
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
-    'options': '-vn'
-    }
-
 getCookieFile()
-
-token = environ["TOKEN"]
-search_engine = environ["SEARCH_ENGINE"]
-search_token = environ["SEARCH_TOKEN"]
 
 activity = discord.Activity(type=discord.ActivityType.listening, name="-help")
 client = commands.Bot(command_prefix='-', activity=activity, help_command=NeodiumHelpCommand())  # prefix our commands with '-'
@@ -42,6 +31,7 @@ spotify_api = SpotifyClient()
 yt_dl_instance = YTdownload(client)
 in_dl_instance = INSdownload(client)
 private_instance = private_login('login.json')
+paginator = Paginator(client)
 
 player = {}
 masters = {}
@@ -217,23 +207,13 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
         videos = songs["entries"]
 
         try:
-            options = {'1️⃣': 0, '2️⃣': 1, '3️⃣': 2, '4️⃣': 3, '5️⃣': 4}
             out = ''
-
             for i, song in enumerate(videos):
                 out = f'{out}{i+1}. [{song["title"]}]({song["webpage_url"]})\n'
 
             embed=discord.Embed(title="Search results", description=out, color=0xfe4b81)
-            emb = await ctx.send(embed=embed)
-
-            for option in options:
-                await emb.add_reaction(option)
-
-            def check(reaction, user):
-                return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
-            
-            react, user = await self.bot.wait_for('reaction_add', check=check, timeout=30.0)
-            info = videos[options[react.emoji]]
+            user_choice = await paginator.handleOptions(embed=embed, nops=len(videos), ctx=ctx)
+            info = videos[user_choice]
 
             if voice:
                 if not masters[ctx.guild.id].voice or masters[ctx.guild.id].voice.channel != voice.channel or (not (voice.is_playing() or voice.is_paused()) and queues[ctx.guild.id] == []):
@@ -508,18 +488,11 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
         npages = 1
         voice = get(self.bot.voice_clients, guild=ctx.guild)
 
-
         if voice and not queues[ctx.guild.id] == []:
             if len(queues[ctx.guild.id])%limit == 0 and len(queues[ctx.guild.id]) != 0:
                 npages = int(len(queues[ctx.guild.id])/limit)
             else:
                 npages = int(len(queues[ctx.guild.id])/limit) + 1
-            paginator = EmbedPaginator(ctx)
-            paginator.add_reaction('⏮️', "first")
-            paginator.add_reaction('⏪', "back")
-            paginator.add_reaction('⏩', "next")
-            paginator.add_reaction('⏭️', "last")
-
             i = 0
             p = 1
             for j, song in enumerate(queues[ctx.guild.id]):
@@ -537,7 +510,7 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
             embed=discord.Embed(title="Currently in queue", description=out, color=0xfe4b81)
             pages.append(embed)
 
-            await paginator.run(pages)
+            await paginator.handlePages(pages, ctx)
 
         else:
             out = "None"
@@ -651,51 +624,21 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
     @commands.command(name="clear-queue", aliases=["clear"], help='Clears the queue')
     @checkQueueLock(hard=True, check_if_bot_connected=True)
     async def clearQueue(self, ctx):
-        options = ["👍", "🚫"]
         embed=discord.Embed(title="Do you really want to clear the queue", color=0xfe4b81)
-        emb = await ctx.send(embed=embed)
-        try:
-            for option in options:
-                await emb.add_reaction(option)
-            
-            def chk(reaction, user):
-                return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
-            
-            react, user = await self.bot.wait_for('reaction_add', check=chk, timeout=30.0)
-            if react.emoji == "👍":
-                queues[ctx.guild.id] = []
-                await emb.delete()
-                embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=10)
-            else:
-                await emb.delete()
-        except asyncio.TimeoutError:
-            await emb.delete()
+        success_embed=discord.Embed(title="The queue has been cleared", color=0xfe4b81)
+        user_decision = await paginator.handleDecision(embed=embed, resp_embed=success_embed, ctx=ctx)
+        if user_decision:
+            queues[ctx.guild.id] = []
 
 
     @commands.command(name="shuffle", help='Shuffles the whole queue')
     @checkQueueLock(check_if_bot_connected=True)
     async def shuffleQueue(self, ctx):
-        options = ["👍", "🚫"]
         embed=discord.Embed(title="Do you really want to shuffle the queue", color=0xfe4b81)
-        emb = await ctx.send(embed=embed)
-        try:
-            for option in options:
-                await emb.add_reaction(option)
-            
-            def chk(reaction, user):
-                return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
-            
-            react, user = await self.bot.wait_for('reaction_add', check=chk, timeout=30.0)
-            if react.emoji == "👍":
-                shuffle(queues[ctx.guild.id])
-                await emb.delete()
-                embed=discord.Embed(title="The queue has been shuffled", color=0xfe4b81)
-                await ctx.send(embed=embed, delete_after=10)
-            else:
-                await emb.delete()
-        except asyncio.TimeoutError:
-            await emb.delete()
+        success_embed=discord.Embed(title="The queue has been shuffled", color=0xfe4b81)
+        user_decision = await paginator.handleDecision(embed=embed, resp_embed=success_embed, ctx=ctx)
+        if user_decision:
+            shuffle(queues[ctx.guild.id])
 
 
     @commands.command(help='Locks the queue and prevents anyone from damaging anyone\'s experience')
@@ -778,23 +721,9 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
     async def logout(self, ctx):
         if private_instance.is_user_authenticated(ctx.author.id):
             embed=discord.Embed(title="Do you really want to logout", color=0xfe4b81)
-            emb = await ctx.send(embed=embed)
-
-            try:
-                await emb.add_reaction('👍')
-                await emb.add_reaction('🚫')
-                
-                def chk(reaction, user):
-                    return reaction.message == emb and reaction.message.channel == ctx.channel and user == ctx.author
-                
-                react, user = await self.bot.wait_for('reaction_add', check=chk, timeout=30.0)
-                if react.emoji == "👍":
-                    await private_instance.logout(ctx)
-                    await emb.delete()
-                else:
-                    await emb.delete()
-            except asyncio.TimeoutError:
-                await emb.delete()
+            user_decision = await paginator.handleDecision(embed=embed, resp_embed=embed, ctx=ctx)
+            if user_decision:
+                await private_instance.logout(ctx)
 
 
 class SpecialCommands(commands.Cog, name="Special", description="This category of commands contains the special commands which can only be accessed by the owner of the bot. These commands enables the owner to remotely invoke methods for temporary fixes or other debugging stuff."):

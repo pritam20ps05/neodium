@@ -13,13 +13,10 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
 """
 import discord
 import tekore as tk
-from os import environ
 from discord.ext import commands
 from yt_dlp import YoutubeDL
-from .download import YDL_OPTIONS, ydl_async
-
-client_id = environ['SPOTIFY_CLIENT_ID']
-client_secret = environ['SPOTIFY_CLIENT_SECRET']
+from .download import ydl_async
+from .vars import *
 
 token = tk.request_client_token(client_id, client_secret)
 spotify = tk.Spotify(token, asynchronous=True)
@@ -46,7 +43,7 @@ class SpotifyClient():
                 queue.append({
                     "link": info['url'],
                     "url": self.getURL(track.uri),
-                    "title": track.name,
+                    "title": f'{track.name} - {track.artists[0].name}',
                     "thumbnails": [track.album.images[0].__dict__]
                 })
         embed=discord.Embed(title="Playlist items were added to queue", color=0xfe4b81)
