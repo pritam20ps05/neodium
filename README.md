@@ -44,8 +44,8 @@ This category of commands contains the playable functionalities of the bot. All 
     -live, -l [url]                      Plays a YT live from the URL provided 
                                          as input.
     
-    -add-playlist [playlist_url]         Adds a whole YT playlist to queue and 
-     [starting_index] [ending_index]     starts playing it. Input is taken as 
+    -add-playlist [playlist_url]         Adds a whole YT or Spotify playlist to queue 
+     [starting_index] [ending_index]     and starts playing it. Input is taken as 
                                          the URL to the public or unlisted playlist.
                                          You can also mention a starting point or an 
                                          ending point of the playlist or both.
@@ -75,6 +75,8 @@ This category of commands contains the commands related to queues. Also there is
     -stop                     Q          Just like skip but also clears the queue.
     
     -clear-queue, -clear      Q          Clears the queue.
+    
+    -shuffle                  Q          Randomly shuffles the whole queue.
     
     -lock                                Locks the queue and prevents anyone from 
                                          damaging anyone\'s experience.
@@ -128,6 +130,8 @@ pip install -r requirements.txt
 This bot fetches lyrics from [genius.com](https://genius.com) searched using google search api. All this things are done by the lyrics_extractor module which requires SEARCH ENGINE CODE and GOOGLE SEARCH API TOKEN. How to setup lyrics_extractor is given [here](https://www.geeksforgeeks.org/create-a-gui-to-extract-lyrics-from-song-using-python/) you just need the two values.
 
 Now get the [bot token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token), after that create 2 cookie files one for youtube and the other for instagram using [cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt/bgaddhkoddajcdgocldbbfleckgcbcid?hl=en) chrome extension. Once done upload them to google drive, make it public and copy their file ids'.
+
+You will also need spotify client id and client secret which you can get them after creating an app from [here](https://developer.spotify.com/dashboard/applications).
     
 The following are all the environmental variables required for starting the bot.
 
@@ -137,6 +141,8 @@ SEARCH_ENGINE <SEARCH ENGINE CODE>
 SEARCH_TOKEN <GOOGLE SEARCH API TOKEN>
 INSTA_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR INSTAGRAM>
 YT_COOKIEFILE_ID <COOKIEFILE GDRIVE FILE ID FOR YT>
+SPOTIFY_CLIENT_ID
+SPOTIFY_CLIENT_SECRET
 ```
 
 This bot requires the following buildpacks and the above mentioned variables. If you are using the deploy to heroku button to deploy, then you don't need to care about the buidpacks but you will still need the variables.

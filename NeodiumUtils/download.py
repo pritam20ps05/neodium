@@ -25,7 +25,7 @@ from string import ascii_letters
 from discord import SelectMenu, SelectOption
 from yt_dlp import YoutubeDL, utils
 from yt_dlp.extractor.instagram import InstagramBaseIE
-
+from .vars import *
 
 async def ffmpegPostProcessor(inputfile, vc, ac, ext):
     outfilename = inputfile.split('/')[-1]
@@ -51,97 +51,56 @@ async def ydl_async(url, ytops, d):
         result = await loop.run_in_executor(pool, y_dl, url, ytops, d)
     return result
 
-class FileBin():
-    async def upload(filepath: str, filename: str):
-        api = 'https://filebin.net/'
-        bin = ''.join(random.choice(ascii_letters) for _ in range(18))
+class GoFileError(Exception):
+    def __init__(self, msg, resp) -> None:
+        self.status = resp.get('status')
+        self.data = resp.get('data')
+        self.payload = resp
+        super().__init__(f'{msg}. api responded with status {self.status}.')
+
+class GoFile():
+    async def getServer():
+        api = 'https://api.gofile.io/getServer'
         async with aiohttp.ClientSession() as session:
+            async with session.get(api) as resp:
+                r = await resp.json()
+        if r.get('status') == 'ok':
+            return r['data'].get('server')
+        raise GoFileError('[get_server] can\'t fetch servername', r)
+
+    async def upload(filepath: str, filename: str):
+        server = await GoFile.getServer()
+        api = f'https://{server}.gofile.io'
+        async with aiohttp.ClientSession() as session:
+            formdata = aiohttp.FormData()
             with open(filepath, 'rb') as f:
-                async with session.post(f'{api}{bin}/{filename}', data=f) as resp:
+                formdata.add_field('file', f, filename=filename)
+                async with session.post(f'{api}/uploadFile', data=formdata) as resp:
                     r = await resp.json()
-        dl_url = api+r['bin']['id']+'/'+r['file']['filename']
-        return dl_url
+        if r.get('status') == 'ok':
+            return r['data'].get('downloadPage')
+        raise GoFileError('[upload] can\'t upload file', r)
 
 class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
         self.client = client
-        self.dl_ytops = {
-            'cookiefile': cookie_file,
-            'noplaylist': True
+        self.dl_ops = {
+            'noplaylist': True,
+            'restrictfilenames': True,
+            'cookiefile': cookie_file
         }
         self.vcodecs = ['h264', 'copy']
 
-    async def getUrlInfo(self, url: str):
-        video_resolutions = []
-        try:
-            info = await ydl_async(url, {'noplaylist': True}, False)
-        except Exception as e:
-            raise e
-        
-        for format in info['formats']:
-            if 'p' in format['format_note'] and format['format_note'] not in video_resolutions:
-                video_resolutions.append(format['format_note'])
-
-        return info, video_resolutions
-
-    async def getUserChoice(self, ctx: commands.Context, url: str, copt: int):
-        try:
-            info, video_resolutions = await self.getUrlInfo(url)
-        except utils.DownloadError as e:
-            embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
-            await ctx.send(embed=embed, delete_after=15)
-            raise e
-        video_title = info['title']
-        title = 'Available formats for'
-
-        options = []
-        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
-        for i, res in enumerate(video_resolutions):
-            options.append(SelectOption(emoji='🎥', label=res, value=res, description='.mp4'))
-
-        embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
-        emb = await ctx.send(embed=embed, components=[
-            [
-                SelectMenu(
-                    custom_id='_select_it',
-                    options=options,
-                    placeholder='Select a format',
-                    max_values=1,
-                    min_values=1 
-                )
-            ]
-        ])
-
-        def check_selection(i: discord.Interaction, select_menu):
-            return i.author == ctx.author and i.message == emb
-
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
-        if str(select_menu.values[0]) == '1':
-            format = 'bestaudio'
-            ext = 'm4a'
-            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
-            await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt)
-        else:
-            format_note = select_menu.values[0]
-            format = f'bestvideo[format_note={format_note}]+bestaudio/best'
-            ext = 'mp4'
-            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
-            await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt)
-
     async def downloadAndSendFile(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int, usrcreds=None):
+        ytops = self.dl_ops.copy()
         if usrcreds:
-            ytops = usrcreds
-        else:
-            ytops = self.dl_ytops
+            ytops.update(usrcreds)
         ytops['format'] = format
         ytops['merge_output_format'] = ext
         InstagramBaseIE._IS_LOGGED_IN = False
 
         with tempfile.TemporaryDirectory(prefix='neodium_dl_') as tempdirname:
             ytops['outtmpl'] = f'{tempdirname}/%(title)s_[%(resolution)s].%(ext)s'
-            ytops['restrictfilenames'] = True
             with YoutubeDL(ytops) as ydl:
                 info = await ydl_async(url, ytops, True)
                 filepath = ydl.prepare_filename(info)
@@ -156,26 +115,104 @@ class Downloader():
                 else:
                     await ctx.send(embed=embed, file=discord.File(filepath))
                     await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
-            except Exception as e:
+            except discord.errors.HTTPException as e:
                 embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=20)
-                dl_url = await FileBin.upload(filepath, filename)
-                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [filebin.net](https://filebin.net/)**', color=0xfe4b81)
+                dl_url = await GoFile.upload(filepath, filename)
+                embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [Gofile.io](https://gofile.io/)**', color=0xfe4b81)
                 if usrcreds:
                     await ctx.author.send(embed=embed)
                     await ctx.author.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
                 else:
                     await ctx.send(embed=embed)
                     await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
+                if 'Payload Too Large' in e.__str__():
+                    print(e)
+                    return
                 raise e
+
+    async def EHdownload(self, ctx: commands.Context, url: str, format: str, ext: str, copt: int, usrcreds=None):
+        try:
+            return await self.downloadAndSendFile(ctx, url, format, ext, copt, usrcreds)
+        except utils.DownloadError as e:
+            if 'Requested format is not available' in e.msg:
+                embed=discord.Embed(title='Cannot fetch the requested format', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=15)
+                return
+            raise e
         
 class YTdownload(Downloader):
     def __init__(self, client: discord.Client):
         cookie_file = 'yt_cookies.txt'
         super().__init__(client, cookie_file)
 
+    async def getUrlInfo(self, url: str):
+        video_resolutions = []
+        try:
+            info = await ydl_async(url, self.dl_ops, False)
+        except Exception as e:
+            raise e
+        
+        for format in info['formats']:
+            if 'p' in format['format_note'] and format['format_note'] not in video_resolutions:
+                video_resolutions.append(format['format_note'])
+
+        return info, video_resolutions
+
     async def downloadVideo(self, ctx, url, copt):
-        await self.getUserChoice(ctx, url, copt)
+        try:
+            info, video_resolutions = await self.getUrlInfo(url)
+        except utils.DownloadError as e:
+            embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
+            await ctx.send(embed=embed, delete_after=15)
+            raise e
+        video_title = info['title']
+        video_page = info['webpage_url']
+        title = 'Available formats for'
+
+        options = []
+        options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
+        for i, res in enumerate(video_resolutions):
+            options.append(SelectOption(emoji='🎥', label=res, value=res, description='.mp4'))
+
+        embed=discord.Embed(title=title, description=f'[{video_title}]({video_page})', color=0xfe4b81)
+        select_menu_context = SelectMenu(
+            custom_id='_select_it',
+            options=options,
+            placeholder='Select a format',
+            max_values=1,
+            min_values=1 
+        )
+        emb = await ctx.send(embed=embed, components=[[select_menu_context]])
+
+        def check_selection(i: discord.Interaction, select_menu):
+            return i.author == ctx.author and i.message == emb
+
+        async def disable_menu(ctx):
+            select_menu_context.disabled = True
+            await ctx.edit(embed=embed, components=[[select_menu_context]])
+
+        try:
+            interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        except asyncio.TimeoutError:
+            print('timeout on selection_select')
+            await disable_menu(emb)
+            return
+        finally:
+            await disable_menu(emb)
+        if str(select_menu.values[0]) == '1':
+            format = 'bestaudio'
+            ext = 'm4a'
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
+            await interaction.respond(embed=embed, hidden=True)
+            await self.EHdownload(ctx, video_page, format, ext, copt)
+        else:
+            format_note = select_menu.values[0]
+            format = f'bestvideo[format_note={format_note}]+bestaudio/best'
+            ext = 'mp4'
+            embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
+            await interaction.respond(embed=embed, hidden=True)
+            await self.EHdownload(ctx, video_page, format, ext, copt)
 
 class INSdownload(Downloader):
     def __init__(self, client: discord.Client):
@@ -183,16 +220,13 @@ class INSdownload(Downloader):
         super().__init__(client, self.cookie_file)
 
     async def downloadVideo(self, ctx, url, copt, usrcreds):
+        ig_ops = self.dl_ops.copy()
         if usrcreds:
-            ops = usrcreds
-        else:
-            ops = {
-                'cookiefile': self.cookie_file
-            }
+            ig_ops.update(usrcreds)
 
         InstagramBaseIE._IS_LOGGED_IN = False
         try:
-            info = await ydl_async(url, ops, False)
+            info = await ydl_async(url, ig_ops, False)
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
             if usrcreds:
                 embed=discord.Embed(title='The link might not be AV or the account is private or try relogging', color=0xfe4b81)
@@ -204,62 +238,68 @@ class INSdownload(Downloader):
         except Exception as e:
             raise e
         video_title = info['title']
+        video_page = info['webpage_url']
         title = 'Available formats for'
 
         options = []
         options.append(SelectOption(emoji='🔊', label='Audio Only', value='1', description='.m4a'))
         options.append(SelectOption(emoji='🎥', label='Audio and Video', value='2', description='.mp4'))
 
-        embed=discord.Embed(title=title, description=f'[{video_title}]({url})', color=0xfe4b81)
-        emb = await ctx.send(embed=embed, components=[
-            [
-                SelectMenu(
-                    custom_id='_select_it',
-                    options=options,
-                    placeholder='Select a format',
-                    max_values=1,
-                    min_values=1 
-                )
-            ]
-        ])
+        embed=discord.Embed(title=title, description=f'[{video_title}]({video_page})', color=0xfe4b81)
+        select_menu_context = SelectMenu(
+            custom_id='_select_it',
+            options=options,
+            placeholder='Select a format',
+            max_values=1,
+            min_values=1 
+        )
+        emb = await ctx.send(embed=embed, components=[[select_menu_context]])
 
         def check_selection(i: discord.Interaction, select_menu):
             return i.author == ctx.author and i.message == emb
 
-        interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        async def disable_menu(ctx):
+            select_menu_context.disabled = True
+            await ctx.edit(embed=embed, components=[[select_menu_context]])
+
+        try:
+            interaction, select_menu = await self.client.wait_for('selection_select', check=check_selection, timeout=30.0)
+        except asyncio.TimeoutError:
+            print('timeout on selection_select')
+            await disable_menu(emb)
+            return
+        finally:
+            await disable_menu(emb)
         if str(select_menu.values[0]) == '1':
             format = 'bestaudio'
             ext = 'm4a'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt, usrcreds)
+            await self.EHdownload(ctx, video_page, format, ext, copt, usrcreds)
             
         else:
             format = 'bestvideo+bestaudio/best'
             ext = 'mp4'
             embed=discord.Embed(title='Preparing your file please bear with us...', description='This might take some time due to recent codec convertion update. We will let you know when your file gets ready', color=0xfe4b81)
             await interaction.respond(embed=embed, hidden=True)
-            await self.downloadAndSendFile(ctx, url, format, ext, copt, usrcreds)
+            await self.EHdownload(ctx, video_page, format, ext, copt, usrcreds)
 
 class private_login():
-    creds = {}
-    cred_path = ''
     def __init__(self, cred_path):
-        private_login.cred_path = cred_path
-        
+        self.cred_path = cred_path
         try:
             with open(cred_path) as f:
-                private_login.creds = load(f)
+                self.creds = load(f)
         except:
             with open(cred_path, 'w') as f:
                 f.write('{}')
             with open(cred_path) as f:
-                private_login.creds = load(f)
+                self.creds = load(f)
 
     def flush_data(self):
-        dump_data = dumps(private_login.creds, indent=4)
+        dump_data = dumps(self.creds, indent=4)
 
-        with open(private_login.cred_path, "w") as outfile:
+        with open(self.cred_path, "w") as outfile:
             outfile.write(dump_data)
 
     def unique_keygen(self, chs=6):
@@ -295,7 +335,7 @@ class private_login():
                 print(e)
 
             if is_username_valid and is_password_valid and not has_process_failed:
-                private_login.creds[str(ctx.author.id)] = {
+                self.creds[str(ctx.author.id)] = {
                     'cookiefile': f'userdata/{ukey}_cookie.txt'
                 }
                 self.flush_data()
@@ -312,20 +352,20 @@ class private_login():
                 await ctx.send(embed=embed)
 
     def is_user_authenticated(self, uid: str):
-        if str(uid) in private_login.creds.keys():
+        if str(uid) in self.creds.keys():
             return True
         else:
             return False
 
     def get_usercreds(self, uid: str):
         if self.is_user_authenticated(str(uid)):
-            return private_login.creds[str(uid)]
+            return self.creds[str(uid)]
         else:
             return None
 
     async def logout(self, ctx: commands.Context):
         if self.is_user_authenticated(ctx.author.id):
-            data = private_login.creds.pop(str(ctx.author.id))
+            data = self.creds.pop(str(ctx.author.id))
             remove(data['cookiefile'])
             self.flush_data()
             embed=discord.Embed(title='You have been successfully logged out of your account', color=0xfe4b81)

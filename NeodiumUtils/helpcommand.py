@@ -15,6 +15,7 @@ import asyncio
 import discord
 from discord.ext import commands
 from discord import SelectMenu, SelectOption
+from .vars import *
 
 class NeodiumHelpCommand(commands.HelpCommand):
     def __init__(self):

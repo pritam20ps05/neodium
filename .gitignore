@@ -1,6 +1,6 @@
-bot-env
+*-env
 __pycache__
-login.json
-insta_cookies.txt
-yt_cookies.txt
-credentials.json
+*test.py
+*.json
+*.txt
+*.mp4

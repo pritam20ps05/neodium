@@ -12,7 +12,7 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
     GNU General Public License for more details.
 """
 import gdown
-from os import environ as env
+from .vars import *
 
 class GdriveDownloadError(Exception):
     def __init__(self, id):
@@ -22,12 +22,12 @@ def getCookieFile(id_insta=None, id_yt=None):
     """
     CookieFile Fetcher
     -------------------
-    A function that just downloads the credential files from G-drive whenever invoked
+    A function that downloads the credential files from G-drive whenever invoked
     """
     if not id_insta:
-        id_insta = env['INSTA_COOKIEFILE_ID']
+        id_insta = ig_file_id
     if not id_yt:
-        id_yt = env['YT_COOKIEFILE_ID']
+        id_yt = yt_file_id
     output_insta = 'insta_cookies.txt'
     output_yt = 'yt_cookies.txt'
     f1 = gdown.download(output=output_insta, id=id_insta, quiet=False)
