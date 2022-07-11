@@ -1,6 +1,6 @@
 {
     "name": "neodium bot template",
-    "description": "A discord music bot with modern advance features initiallly buit to replace groovy.",
+    "description": "A python discord music bot with modern advance features initiallly buit to replace groovy.",
     "repository": "https://github.com/pritam20ps05/neodium",
     "env": {
         "TOKEN": {
@@ -17,6 +17,12 @@
         },
         "YT_COOKIEFILE_ID": {
             "description": "YOUR COOKIEFILE GDRIVE FILE ID FOR YT"
+        },
+        "SPOTIFY_CLIENT_ID": {
+            "description": "YOUR SPOTIFY CLIENT ID"
+        },
+        "SPOTIFY_CLIENT_SECRET": {
+            "description": "YOUR SPOTIFY CLIENT SECRET"
         }
     },
     "buildpacks": [
