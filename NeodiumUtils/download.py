@@ -53,8 +53,8 @@ async def ydl_async(url, ytops, d):
 
 def sanitizeYDLReturnable(info: dict):
     if info.get('_type') == 'playlist':
-        info.update(info['entries'][0])
-        info.pop('entries')
+        return False
+    return True
 
 class GoFileError(Exception):
     def __init__(self, msg, resp) -> None:
@@ -151,11 +151,14 @@ class YTdownload(Downloader):
         cookie_file = 'yt_cookies.txt'
         super().__init__(client, cookie_file)
 
-    async def getUrlInfo(self, url: str):
+    async def getUrlInfo(self, url: str, ctx):
         video_resolutions = []
         try:
             info = await ydl_async(url, self.dl_ops, False)
-            sanitizeYDLReturnable(info)
+            if not sanitizeYDLReturnable(info):
+                embed=discord.Embed(title='Multi-video support is currently not available', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=15)
+                return (None, None)
         except Exception as e:
             raise e
         
@@ -167,7 +170,9 @@ class YTdownload(Downloader):
 
     async def downloadVideo(self, ctx, url, copt):
         try:
-            info, video_resolutions = await self.getUrlInfo(url)
+            info, video_resolutions = await self.getUrlInfo(url, ctx)
+            if not info:
+                return
         except utils.DownloadError as e:
             embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
@@ -233,7 +238,10 @@ class INSdownload(Downloader):
         InstagramBaseIE._IS_LOGGED_IN = False
         try:
             info = await ydl_async(url, ig_ops, False)
-            sanitizeYDLReturnable(info)
+            if not sanitizeYDLReturnable(info):
+                embed=discord.Embed(title='Multi-video support is currently not available', color=0xfe4b81)
+                await ctx.send(embed=embed, delete_after=15)
+                return
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
             if usrcreds:
                 embed=discord.Embed(title='The link might not be AV or the account is private or try relogging', color=0xfe4b81)
