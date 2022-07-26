@@ -1,6 +1,6 @@
 # Neodium
 
-Neodium is a discord music bot with many advanced features. This bot has been made to fill the place of groovy and make it open-source so that anyone can use it. With a First come First serve and task clearing queueing system that is when a queued audio is played it gets removed from the queue so the next audio in the queue can be played.
+Neodium is a discord music bot with many advanced features. This bot has been made to fill the place of groovy and make it open-source so that anyone can use it. With a First come First serve and task clearing queueing system that is when a queued audio is played it gets removed from the queue so the next audio in the queue can be played. Supports playing audio from youtube and spotify.
 
 ## Key Features
 
