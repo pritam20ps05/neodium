@@ -1,2 +1,6 @@
-bot-env
+*-env
 __pycache__
+*test.py
+*.json
+*.txt
+*.mp4

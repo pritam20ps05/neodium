@@ -1,0 +1,1 @@
+This folder consists of all the user coookie files for the new instagram private feature. Please don't upload their data on the next commit
