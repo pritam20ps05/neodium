@@ -13,7 +13,7 @@ Neodium is a discord music bot with many advanced features. This bot has been ma
     
 ## Deploy to Heroku
 
-Click the deploy to heroku button for deploying it now only. Before doing that you would need 5 variable values mentioned in installation/setup section.
+Click the deploy to heroku button for deploying it now only. Before doing that you would need some variable values mentioned in installation/setup section.
     
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/pritam20ps05/neodium/tree/deploy)
 
