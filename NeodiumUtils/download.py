@@ -121,7 +121,7 @@ class Downloader():
                     await ctx.send(embed=embed, file=discord.File(filepath))
                     await ctx.send(f'{ctx.author.mention} your file is ready please download it.', delete_after=60)
             except discord.errors.HTTPException as e:
-                embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shiping it to you through filebin, please bear with us.', color=0xfe4b81)
+                embed=discord.Embed(title='Its taking too long', description='Probably due to file exceeding server upload limit. Don\'t worry we are shipping it to you through a file sharing vendor, please bear with us.', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=20)
                 dl_url = await GoFile.upload(filepath, filename)
                 embed=discord.Embed(title='Your file is ready to download', description=f'[{filename}]({dl_url})\nFile requested by {ctx.author.mention}\n\n**Powered by [Gofile.io](https://gofile.io/)**', color=0xfe4b81)
