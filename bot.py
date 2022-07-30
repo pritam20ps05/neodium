@@ -25,7 +25,7 @@ from NeodiumUtils import *
 getCookieFile()
 
 activity = discord.Activity(type=discord.ActivityType.listening, name="-help")
-client = commands.Bot(command_prefix='-', activity=activity, help_command=NeodiumHelpCommand())  # prefix our commands with '-'
+client = commands.Bot(command_prefix='-', activity=activity, help_command=NeodiumHelpCommand())
 lyrics_api = SongLyrics(search_token, search_engine)
 spotify_api = SpotifyClient()
 yt_dl_instance = YTdownload(client)
@@ -70,7 +70,7 @@ def checkQueueLock(hard=False, check_if_bot_connected=False):
     return commands.check(predicate)
 
 
-# main queue manager function to play music in queues
+# main queue manager function to play music in queue
 async def check_queue(id, voice, ctx, msg=None):
     while True:
         while voice.is_playing() or voice.is_paused():
@@ -126,7 +126,6 @@ async def addsongs(entries, ctx):
 
 
 
-# check if bot is ready
 @client.event  
 async def on_ready():
     print('Bot online')
@@ -138,7 +137,6 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
         self.bot = bot
 
 
-    # command for bot to join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in
     @commands.command(help='Makes the bot join the channel of the user, if the bot has already joined and is in a different channel it will move to the channel the user is in. Only if you are not trying to disturb someone')
     async def join(self, ctx):
         if ctx.message.author.voice:
@@ -162,7 +160,6 @@ class BasicCommands(commands.Cog, name="Basic", description="This category of co
             await ctx.send(embed=embed, delete_after=10)
 
 
-    # leaves the vc on demand
     @commands.command(help='Makes the bot leave the voice channel')
     async def leave(self, ctx):
         voice_client = get(self.bot.voice_clients, guild=ctx.guild)
@@ -259,7 +256,6 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                     embed=discord.Embed(title="You are currently not connected to any voice channel", color=0xfe4b81)
                     await ctx.send(embed=embed, delete_after=10)
         except asyncio.TimeoutError:
-            # await emb.delete()
             pass
         except Exception as e:
             embed=discord.Embed(title="can't play the requested audio", color=0xfe4b81)
@@ -268,7 +264,6 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
 
 
-    # command to play sound from a keyword and queue a song if request is made during playing an audio
     @commands.command(aliases=['p'], help='Searches a query on YT and plays or queues the most relevant result')
     async def play(self, ctx, *, query):
         voice = get(self.bot.voice_clients, guild=ctx.guild)
@@ -407,8 +402,12 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                     "cookiefile": "yt_cookies.txt"
                 }
                 info = await ydl_async(link, opts, False)
-                info["entries"] = info["entries"][sp:ep]
+                if info.get('_type') != 'playlist':
+                    embed=discord.Embed(title="The link is not of a playlist", color=0xfe4b81)
+                    await ctx.send(embed=embed, delete_after=10)
+                    return
 
+                info["entries"] = info["entries"][sp:ep]
                 if sp or ep:
                     if ep:
                         embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {ep}**', color=0xfe4b81)
@@ -480,7 +479,6 @@ class VisualizerCommands(commands.Cog, name="Visualizer", description="This cate
         self.bot = bot
 
 
-    # shows the queued songs of the ctx guild
     @commands.command(name="queue", help='Displays the current queue. Limit is the number of entries shown per page, default is 10')
     async def listQueue(self, ctx, limit=10):
         out = ""
@@ -563,7 +561,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
         self.bot = bot
 
 
-    # removes a mentioned song from queue and displays it
     @commands.command(name="remove", help='Removes an mentioned entry from the queue')
     @checkQueueLock(check_if_bot_connected=True)
     async def removeQueueSong(self, ctx, index: int):
@@ -575,7 +572,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
         await ctx.send(embed=embed)
 
 
-    # command to pause voice if it is playing
     @commands.command(help='Pauses the current player')
     @checkQueueLock(check_if_bot_connected=True)
     async def pause(self, ctx):
@@ -586,7 +582,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
             await ctx.send(embed=embed, delete_after=7)
 
 
-    # command to resume voice if it is paused
     @commands.command(help='Resumes the paused player')
     @checkQueueLock(check_if_bot_connected=True)
     async def resume(self, ctx):
@@ -597,7 +592,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
             await ctx.send(embed=embed, delete_after=7)
 
 
-    # command to skip voice
     @commands.command(help='Skips current audio')
     @checkQueueLock(check_if_bot_connected=True)
     async def skip(self, ctx):
@@ -608,7 +602,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
             await ctx.send(embed=embed, delete_after=7)
 
 
-    # stops the bot player by clearing the current queue and skipping the current audio
     @commands.command(help='Just like skip but also clears the queue')
     @checkQueueLock(hard=True, check_if_bot_connected=True)
     async def stop(self, ctx):
@@ -620,7 +613,6 @@ class QueueCommands(commands.Cog, name="Queue", description="This category of co
             await ctx.send(embed=embed, delete_after=7)
 
 
-    # command to clear queue
     @commands.command(name="clear-queue", aliases=["clear"], help='Clears the queue')
     @checkQueueLock(hard=True, check_if_bot_connected=True)
     async def clearQueue(self, ctx):
@@ -704,7 +696,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
             usrcreds = private_instance.get_usercreds(ctx.author.id)
             await in_dl_instance.downloadVideo(ctx, url, copt, usrcreds)
         else:
-            embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
+            embed=discord.Embed(title='The link is invalid, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
 
 
@@ -773,7 +765,7 @@ for cog in cog_list:
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MaxConcurrencyReached):
-        embed=discord.Embed(title="Please wait..", description="Someone else is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling as the bot is currently running on a free server.", color=0xfe4b81)
+        embed=discord.Embed(title="Please wait..", description="Someone is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling in cases of high processing load.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
     elif isinstance(error, commands.NotOwner):
         embed=discord.Embed(title="Access Denied", description=f"It is a special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use. Read more about them from `{ctx.prefix}help Special`.", color=0xfe4b81)
