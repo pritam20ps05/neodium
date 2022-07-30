@@ -407,8 +407,12 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
                     "cookiefile": "yt_cookies.txt"
                 }
                 info = await ydl_async(link, opts, False)
-                info["entries"] = info["entries"][sp:ep]
+                if info.get('_type') != 'playlist':
+                    embed=discord.Embed(title="The link is not of a playlist", color=0xfe4b81)
+                    await ctx.send(embed=embed, delete_after=10)
+                    return
 
+                info["entries"] = info["entries"][sp:ep]
                 if sp or ep:
                     if ep:
                         embed=discord.Embed(title="Adding Playlist", description=f'[{info["title"]}]({link})\n\n**From {sp+1} to {ep}**', color=0xfe4b81)
@@ -704,7 +708,7 @@ class DownloadCommands(commands.Cog, name="Download", description="This category
             usrcreds = private_instance.get_usercreds(ctx.author.id)
             await in_dl_instance.downloadVideo(ctx, url, copt, usrcreds)
         else:
-            embed=discord.Embed(title='The link is broken, can\'t fetch data', color=0xfe4b81)
+            embed=discord.Embed(title='The link is invalid, can\'t fetch data', color=0xfe4b81)
             await ctx.send(embed=embed, delete_after=15)
 
 
@@ -773,7 +777,7 @@ for cog in cog_list:
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MaxConcurrencyReached):
-        embed=discord.Embed(title="Please wait..", description="Someone else is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling as the bot is currently running on a free server.", color=0xfe4b81)
+        embed=discord.Embed(title="Please wait..", description="Someone is currently using this feature please wait before trying again. This restriction has been implemented to prevent throttling in cases of high processing load.", color=0xfe4b81)
         await ctx.send(embed=embed, delete_after=20)
     elif isinstance(error, commands.NotOwner):
         embed=discord.Embed(title="Access Denied", description=f"It is a special command and is reserved to the owner of the bot only. This types of commands enables the owner to remotely triggure some functions for ease of use. Read more about them from `{ctx.prefix}help Special`.", color=0xfe4b81)

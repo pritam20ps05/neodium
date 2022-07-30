@@ -54,6 +54,8 @@ async def ydl_async(url, ytops, d):
 def sanitizeYDLReturnable(info: dict):
     if info.get('_type') == 'playlist':
         return False
+    elif info.get('is_live'):
+        return False
     return True
 
 class GoFileError(Exception):
@@ -90,6 +92,7 @@ class Downloader():
     def __init__(self, client: discord.Client, cookie_file: str):
         self.client = client
         self.dl_ops = {
+            'noplaylist': True,
             'playlist_items': '1',
             'restrictfilenames': True,
             'cookiefile': cookie_file
@@ -156,7 +159,7 @@ class YTdownload(Downloader):
         try:
             info = await ydl_async(url, self.dl_ops, False)
             if not sanitizeYDLReturnable(info):
-                embed=discord.Embed(title='Multi-video support is currently not available', color=0xfe4b81)
+                embed=discord.Embed(title='Multi-video and live support is currently not available', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=15)
                 return (None, None)
         except Exception as e:
@@ -239,7 +242,7 @@ class INSdownload(Downloader):
         try:
             info = await ydl_async(url, ig_ops, False)
             if not sanitizeYDLReturnable(info):
-                embed=discord.Embed(title='Multi-video support is currently not available', color=0xfe4b81)
+                embed=discord.Embed(title='Multi-video and live support is currently not available', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=15)
                 return
         except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
