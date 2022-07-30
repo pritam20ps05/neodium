@@ -381,9 +381,9 @@ class PlayerCommands(commands.Cog, name="Player", description="This category of 
 
         source = None
         if 'youtube' in url or 'youtu.be' in url:
-            p_id = re.search(r'^.*?(?:list)=(.*?)(?:&|$)', url).groups()
+            p_id = re.search(r'^.*?(?:list)=(.*?)(?:&|$)', url)
             if p_id:
-                link = "https://www.youtube.com/playlist?list=" + p_id[0]
+                link = "https://www.youtube.com/playlist?list=" + p_id.groups()[0]
                 source = 'youtube'
         elif 'spotify' in url:
             source = 'spotify'
