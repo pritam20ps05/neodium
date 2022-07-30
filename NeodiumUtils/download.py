@@ -245,7 +245,7 @@ class INSdownload(Downloader):
                 embed=discord.Embed(title='Multi-video and live support is currently not available', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=15)
                 return
-        except utils.DownloadError as e: # try to revive the file through requests, also a private system is to be made
+        except utils.DownloadError as e:
             if usrcreds:
                 embed=discord.Embed(title='The link might not be AV or the account is private or try relogging', color=0xfe4b81)
                 await ctx.send(embed=embed, delete_after=15)
