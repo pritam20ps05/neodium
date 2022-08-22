@@ -1,6 +1,6 @@
 {
     "name": "neodium bot template",
-    "description": "A python discord music bot with modern advance features initially buit to replace groovy.",
+    "description": "A python discord music bot with modern and advance features initially buit to replace groovy.",
     "repository": "https://github.com/pritam20ps05/neodium",
     "env": {
         "TOKEN": {
