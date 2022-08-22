@@ -24,8 +24,8 @@ class NeodiumHelpCommand(commands.HelpCommand):
 
     async def send_bot_help(self, mapping):
         cog_embeds = {}
-        embed=discord.Embed(title='Neodium', description='A bot built by [pritam20ps05](https://github.com/pritam20ps05) made to enhance the experience of music by integrating it into discord. This bot was initially made to replace groovy after its discontinuation but it became something much more than that. This is a vanilla(original) version of the open source project neodium, checkout on github for extended documentation.', url='https://github.com/pritam20ps05/neodium', color=0xfe4b81)
-        embed.set_footer(text='Built on neodium core v1.2 by pritam20ps05', icon_url='https://user-images.githubusercontent.com/49360491/170466737-afafd7aa-f067-4503-9a1d-7d74de1b474b.png')
+        embed=discord.Embed(title='Neodium', description='A music bot built on python made to enhance the experience of music by integrating it into discord. This bot was initially made to replace groovy after its discontinuation but it became something much more than that. This is the vanilla(original) version of the open source neodium project, checkout on github for extended documentation.', url='https://github.com/pritam20ps05/neodium', color=0xfe4b81)
+        embed.set_footer(text=f'Built on neodium core v{version} by pritam20ps05', icon_url='https://user-images.githubusercontent.com/49360491/170466737-afafd7aa-f067-4503-9a1d-7d74de1b474b.png')
         options = []
         for cog in mapping:
             if cog:

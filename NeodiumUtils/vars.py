@@ -13,6 +13,8 @@ copyright (c) 2021  pritam20ps05(Pritam Das)
 """
 from os import environ
 
+version = "1.2"
+
 token = environ["TOKEN"]
 search_engine = environ["SEARCH_ENGINE"]
 search_token = environ["SEARCH_TOKEN"]
