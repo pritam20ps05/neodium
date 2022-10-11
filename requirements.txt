@@ -1,6 +1,6 @@
-discord.py-message-components>=1.7.5.4
+discord.py-message-components==1.7.5.4
 gdown==4.4.0
 lyrics-extractor==3.0.1
 PyNaCl==1.4.0
 tekore==4.4.0
-yt-dlp>=2022.7.18
+yt-dlp==2022.10.04
